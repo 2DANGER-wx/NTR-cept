@@ -1,1027 +1,183 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NTR-CEPT</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>NTR-CEPT</title>
 <style>
-:root{color-scheme:dark;--bg:#0b111a;--panel:#152130;
---line:#30465c;--text:#e7f1fb;--muted:#9bb1c6;--accent:#68efc9}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);
-font:14px/1.5 system-ui,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;
-gap:14px;flex-wrap:wrap;padding:16px 22px;border-bottom:1px solid var(--line)}
-h1{margin:0;font-size:28px;letter-spacing:4px}
-h1 span{color:var(--accent)}
-h2{font-size:19px;margin:0 0 12px}
-h3{font-size:15px;margin:16px 0 8px}
-p{margin:8px 0}
-small,.muted{color:var(--muted)}
-button,input,select{font:inherit}
-button,select{color:var(--text);background:#203247;border:1px solid #49627a;
-border-radius:7px;padding:9px 12px}
-button{cursor:pointer}
-button:hover{background:#304b65}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.active,.primary{border-color:var(--accent);background:#175043}
-.danger{border-color:#f58a95}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-main{max-width:1450px;margin:auto;padding:15px;display:grid;
-grid-template-columns:minmax(0,1fr) 330px;gap:15px}
-.panel{padding:15px;background:var(--panel);border:1px solid var(--line);
-border-radius:12px;margin-bottom:15px}
-.stage{padding:0;overflow:hidden}
-canvas{display:block;width:100%;aspect-ratio:1000/560;
-background:#101c29;touch-action:none}
-#caption{padding:10px 15px;min-height:46px;color:var(--muted)}
-.stat{display:flex;justify-content:space-between;gap:12px;
-padding:5px 0;border-bottom:1px solid #293c50}
-.stat b{text-align:right;color:#bbf5e3}
-#bank{font-size:22px;color:var(--accent);font-weight:bold}
-#cars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.card{padding:12px;background:#0f1925;border:1px solid var(--line);
-border-radius:8px}
-.card h3{margin:0 0 6px}
-.stack{display:grid;gap:8px}
-.notice{padding:10px 12px;border-left:3px solid var(--accent);
-background:#122e2c;margin-top:12px}
-.hidden{display:none!important}
-#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
-background:#174439;border:1px solid var(--accent);padding:12px 18px;
-border-radius:9px;max-width:92vw;pointer-events:none;opacity:0;z-index:10}
-progress{width:100%;height:15px;accent-color:var(--accent)}
-#touch{display:flex;gap:8px;margin-top:10px}
-#touch button{flex:1;min-height:46px;touch-action:none;user-select:none}
-input[type=color]{width:48px;height:36px;border:0;background:transparent}
-footer{max-width:1450px;margin:auto;padding:0 16px 22px;color:var(--muted);
-font-size:12px}
-details p{font-size:12px}
-@media(max-width:950px){main{grid-template-columns:1fr}
-aside{display:grid;grid-template-columns:1fr 1fr;gap:15px}}
-@media(max-width:600px){aside{display:block}main{padding:8px}
-header{padding:12px}#cars{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<header>
-<div><h1>NTR<span>-CEPT</span></h1>
-<small>Build your interceptor. Chase the storm.</small></div>
-<div class="row">
-<button id="garageTab" class="active">Garage</button>
-<button id="dealerTab">Dealership</button>
-<button id="launch" class="primary">Intercept</button>
-</div>
-<div><small>RESEARCH FUNDS</small> <span id="bank"></span></div>
-</header>
-<main>
-<section>
-<div class="panel stage">
-<canvas id="view" width="1000" height="560"
-aria-label="Vehicle workshop and tornado interception"></canvas>
-<div id="caption"></div>
-</div>
-
-<div id="workshop" class="panel">
-<div class="row">
-<label>Vehicle <select id="fleet"></select></label>
-<label>Paint <input id="paint" type="color"></label>
-<button id="photoButton">Import vehicle image</button>
-<button id="removePhoto">Remove image</button>
-<input id="photoFile" type="file" accept="image/*" hidden>
-</div>
-<h3>Draw your own frame</h3>
-<p class="muted">Drag to weld a tube over the side-view vehicle.
-Endpoints snap to a grid. The live preview shows the exact drawing that
-will appear during interception. Drawing is free; installing new tubing
-costs materials and labor.</p>
-<div class="row">
-<button id="draw" class="active">Draw</button>
-<button id="erase">Erase tube</button>
-<button id="undo">Undo</button>
-<button id="clear">Clear draft</button>
-<button id="install" class="primary">Install frame</button>
-</div>
-<h3>Or buy a predesigned frame</h3>
-<div class="row">
-<button data-frame="cage">Cage preset</button>
-<button data-frame="low">Low-profile preset</button>
-<button data-frame="heavy">Heavy cage preset</button>
-</div>
-<p id="quote" class="muted"></p>
-<small>Presets load a preview; Install purchases it. Bare tubes are not
-solid aerodynamic panels. Removing tubing gives no refund.</small>
-</div>
-
-<div id="dealership" class="panel hidden">
-<h2>Vehicle dealership</h2>
-<p class="muted">Each owned vehicle keeps its own frame, armor,
-equipment, paint, image, and damage.</p>
-<div id="cars"></div>
-</div>
-
-<div id="fieldControls" class="panel hidden">
-<div class="row">
-<button id="anchor">Deploy spikes [X]</button>
-<button id="probe">Drop probe [P] — $250</button>
-<button id="pause">Pause</button>
-<button id="return" class="danger">Return / evacuate</button>
-</div>
-<p class="muted">A/D or ←/→ drive · Space brake · X spikes · P probe.
-Slow down before anchoring. Get near the tornado for scientific data,
-but retreat if the vehicle starts lifting or tipping.</p>
-<div id="touch">
-<button data-hold="KeyA">◀ Drive</button>
-<button data-hold="Space">Brake</button>
-<button data-hold="KeyD">Drive ▶</button>
-</div>
-</div>
-</section>
-
-<aside>
-<div class="panel">
-<h2 id="title">Vehicle engineering</h2>
-<div id="stats"></div>
-<div id="upgrades">
-<h3>Armor levels</h3>
-<label>Plate thickness
-<select id="plate">
-<option value="1">Level 1 — 3 mm</option>
-<option value="2">Level 2 — 6 mm</option>
-<option value="3">Level 3 — 10 mm</option>
-</select></label>
-<p class="muted">Choose a level, then choose a panel to purchase it.
-Installed armor is immediately visible.</p>
-<div id="panels" class="stack"></div>
-<h3>Equipment</h3>
-<div class="stack">
-<button id="hail">Install hail guard</button>
-<button id="spikes">Install ground spikes</button>
-<button id="strongSpikes">Reinforce spikes</button>
-<button id="repair">Repair</button>
-<button id="recover">Emergency Tahoe recovery</button>
-</div>
-</div>
-<div id="telemetry" class="hidden">
-<h3>Integrity</h3>
-<progress id="health" max="100"></progress>
-<p id="readout"></p>
-<h3>Storm advisory</h3>
-<p id="forecast" class="muted"></p>
-</div>
-</div>
-<div class="panel">
-<h2>Engineering notes</h2>
-<p class="muted">Frame mass follows tube length and hollow steel
-cross-section. Armor mass follows plate area and thickness.
-Wind loading affects movement, lift, traction, and overturn risk.</p>
-<details>
-<summary>Assumptions / save controls</summary>
-<p>Air density: 1.225 kg/m³. Steel density: 7,850 kg/m³.
-Frame tubes: 70 mm outside diameter, 5 mm wall thickness.
-Armor areas scale with vehicle dimensions.</p>
-<p>Stock curb masses, frontal areas, and drag coefficients are
-representative estimates. Crosswind and lift coefficients, soil holding,
-equipment strength, and damage are gameplay assumptions.
-A side-view drawing cannot determine actual 3D aerodynamics.</p>
-<p>Only installed frames are saved. Imported images and progress stay
-in this browser when local storage is available.</p>
-<button id="reset" class="danger">Reset progress</button>
-</details>
-<div class="notice">Fictional simulation. No vehicle makes a real
-tornado intercept safe. This is not CFD or a validated structural model.</div>
-</div>
-</aside>
-</main>
-<footer>NTR-CEPT • One HTML file • No external libraries or required
-image downloads • Optional locally imported vehicle artwork</footer>
-<div id="toast" role="status" aria-live="polite"></div>
-
+:root{--bg:#14232b;--pn:#1a2c36f2;--tx:#e9eef1;--mu:#93a9b5;--ac:#ff7a2f;--ok:#58d68d;--bd:#ff5a5a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14232b}}
+:root[data-theme="dark"]{--bg:#14232b}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.4 Verdana,Tahoma,sans-serif;overflow:hidden}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+#pn{position:fixed;right:0;top:max(0px,env(safe-area-inset-top,0px));bottom:0;width:min(410px,100%);background:var(--pn);padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));overflow-y:auto;border-left:2px solid var(--ac)}
+h1{margin:0;font:900 26px Impact,Haettenschweiler,sans-serif;letter-spacing:2px;color:var(--ac)}
+h2{font-size:13px;margin:14px 0 6px;color:var(--mu);font-weight:600}
+button{background:#25404e;color:var(--tx);border:1px solid #3b5d6e;border-radius:4px;padding:6px 9px;margin:2px;cursor:pointer;font:inherit}
+button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006;border-color:var(--ac);font-weight:700}
+#fr{width:100%;touch-action:none;border:1px solid #3b5d6e;border-radius:4px;background:#0f1b21;cursor:crosshair;display:block}
+#go{width:100%;margin:14px 0 0;padding:12px;font:900 18px Impact,sans-serif;letter-spacing:2px;background:var(--ac);color:#1b1006;border:0}
+.st{display:flex;justify-content:space-between;border-bottom:1px solid #2c4553;padding:2px 0}.st b{color:var(--ok)}
+#hud{position:fixed;left:max(10px,env(safe-area-inset-left,0px));top:max(10px,env(safe-area-inset-top,0px));background:#14232bcc;padding:10px 12px;border-radius:6px;min-width:230px}
+#bar{height:8px;background:#38242a;margin:4px 0}#bar i{display:block;height:100%;background:var(--ok)}
+#ar{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));margin-left:-18px;font-size:34px;color:var(--ac);text-shadow:0 0 6px #000}
+#msg{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#000b;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .3s;pointer-events:none}
+#res{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;text-align:center}#res div{background:var(--pn);padding:26px 36px;border:2px solid var(--ac);border-radius:8px}
+[hidden]{display:none!important}
+@media(max-width:700px){#pn{top:auto;height:56%;border-left:0;border-top:2px solid var(--ac)}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud" hidden></div><div id="ar" hidden>▲</div><div id="msg"></div>
+<div id="pn"><h1>NTR-CEPT</h1><div id="cr"></div>
+<h2>Garage</h2><div id="veh"></div>
+<h2>Frame: draw it yourself (drag to add or erase, nose points right)</h2><canvas id="fr"></canvas>
+<div><button onclick="pre(1)">Roll cage</button><button onclick="pre(2)">Plow wedge</button><button onclick="pre(3)">Fortress</button><button onclick="pre(0)">Clear</button></div>
+<h2>Armor, hail guard, anchor spikes</h2><div id="opt"></div>
+<h2>Physics readout</h2><div id="stat"></div>
+<button id="go" onclick="go()">INTERCEPT</button>
+<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer, Space drops or lifts anchor spikes. Stay inside the vortex to collect data.</p></div>
+<div id="res" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-"use strict";
-const $=id=>document.getElementById(id);
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const random=(a,b)=>a+Math.random()*(b-a);
-const cash=n=>"$"+Math.round(n).toLocaleString();
-const number=n=>Math.round(n).toLocaleString();
-const copy=o=>JSON.parse(JSON.stringify(o));
-const canvas=$("view"),ctx=canvas.getContext("2d");
-const STORE="ntr-cept-build-2";
-const RHO=1.225,STEEL=7850,G=9.81;
-const TUBE_KG=Math.PI/4*(.07**2-.06**2)*STEEL;
-const THICK=[0,.003,.006,.010];
-
-// Representative reference configurations, not certified specifications.
-const VEHICLES=[
-{id:"tahoe",name:"Chevrolet Tahoe",ref:"2015 SUV reference",
- mass:2410,cd:.36,area:3.18,L:5.18,H:1.89,W:2.04,
- track:1.74,cg:.78,power:265000,price:0,kind:"suv"},
-{id:"explorer",name:"Ford Explorer",ref:"2016 SUV reference",
- mass:2090,cd:.35,area:2.93,L:5.04,H:1.78,W:2.00,
- track:1.70,cg:.72,power:216000,price:18500,kind:"explorer"},
-{id:"yukon",name:"2011 GMC Yukon",ref:"2011 SUV reference",
- mass:2490,cd:.36,area:3.17,L:5.13,H:1.95,W:2.01,
- track:1.73,cg:.81,power:239000,price:21000,kind:"yukon"},
-{id:"f150",name:"Ford F-150",ref:"2015 crew-cab reference",
- mass:2180,cd:.40,area:3.18,L:5.89,H:1.92,W:2.03,
- track:1.72,cg:.79,power:272000,price:26000,kind:"truck"},
-{id:"f350",name:"Ford F-350",ref:"2017 diesel crew-cab reference",
- mass:3380,cd:.44,area:3.65,L:6.35,H:2.02,W:2.03,
- track:1.76,cg:.86,power:328000,price:47000,kind:"heavy"}
-];
-const PANELS=[
-{id:"side",label:"Door / side armor",area:5.6,height:.44},
-{id:"roof",label:"Roof armor",area:3.4,height:.96},
-{id:"hood",label:"Hood armor",area:1.8,height:.55},
-{id:"glass",label:"Window shutters",area:2.5,height:.73},
-{id:"bumper",label:"Front / rear shields",area:1.4,height:.34}
-];
-const findCar=id=>VEHICLES.find(v=>v.id===id);
-function newBuild(){
- return {paint:"#cad6df",frame:[],armor:{},hail:false,
- spikes:0,health:100,photo:null};
-}
-function fresh(){
- return {cash:10000,active:"tahoe",builds:{tahoe:newBuild()},runs:0};
-}
-let state=fresh();
-try{
- const saved=JSON.parse(localStorage.getItem(STORE));
- if(saved && Number.isFinite(saved.cash) && saved.cash>=0 &&
- saved.builds && saved.builds.tahoe && saved.builds[saved.active] &&
- findCar(saved.active)){
-  state=saved;
-  for(const id of Object.keys(state.builds)){
-   if(!findCar(id)){delete state.builds[id];continue;}
-   const b=state.builds[id];
-   state.builds[id]=Object.assign(newBuild(),b);
-   state.builds[id].health=clamp(Number(b.health)||0,0,100);
-   if(!Array.isArray(b.frame))state.builds[id].frame=[];
-   state.builds[id].frame=state.builds[id].frame.filter(s=>
-    Array.isArray(s)&&s.length===4&&s.every(Number.isFinite)).slice(0,80);
-   for(const p of PANELS)
-    state.builds[id].armor[p.id]=clamp(
-      Math.floor(Number(state.builds[id].armor[p.id])||0),0,3);
-  }
- }
-}catch(e){state=fresh();}
-let mode="garage",tool="draw",draft=[],undo=[],start=null,hover=null;
-let storm=null,keys={},imageCache={},noticeTimer,storageWarned=false;
-const car=()=>findCar(state.active);
-const build=()=>state.builds[state.active];
-function notify(message){
- $("toast").textContent=message;$("toast").style.opacity=1;
- clearTimeout(noticeTimer);
- noticeTimer=setTimeout(()=>$("toast").style.opacity=0,3800);
-}
-function save(){
- try{localStorage.setItem(STORE,JSON.stringify(state));}
- catch(e){if(!storageWarned){
-  storageWarned=true;notify("Storage unavailable/full. This session still works, but may not save.");
- }}
-}
-function pay(amount){
- amount=Math.max(0,Math.round(amount));
- if(state.cash<amount){notify("Not enough funds. Collect data in an intercept.");return false;}
- state.cash-=amount;return true;
-}
-function loadDraft(){
- draft=copy(build().frame);undo=[];start=null;
- $("paint").value=build().paint;
-}
-function remember(){
- undo.push(copy(draft));if(undo.length>40)undo.shift();
-}
-function length(s,c){
- return Math.hypot((s[2]-s[0])*c.L,(s[3]-s[1])*c.H);
-}
-function key(s){
- const a=s.slice(0,2).map(x=>x.toFixed(4)).join(",");
- const b=s.slice(2).map(x=>x.toFixed(4)).join(",");
- return [a,b].sort().join("/");
-}
-function quote(){
- const old=new Set(build().frame.map(key));
- return Math.round(draft.reduce((sum,s)=>sum+
-  (old.has(key(s))?0:length(s,car())*125),0));
-}
-function install(){
- if(mode==="storm")return false;
- if(!pay(quote()))return false;
- build().frame=copy(draft);undo=[];save();refresh();
- notify("Frame installed. Your drawn tubes will appear in the storm.");
- return true;
-}
-function engineering(c,b,frame=b.frame){
- let frameMass=0,frameMoment=0,tubeArea=0,totalLength=0,highArea=0;
- for(const s of frame){
-  const len=length(s,c),mass=len*TUBE_KG;
-  const height=clamp((1-(s[1]+s[3])/2)*c.H,.05,c.H*1.4);
-  totalLength+=len;frameMass+=mass;frameMoment+=mass*height;
-  // Conservative exposed-tube projection; overlapping tubes are not a shell.
-  tubeArea+=len*.07;
-  if(height>c.H*.8)highArea+=len*.07;
- }
- const areaScale=c.L*c.H/(5.18*1.89);
- let armorMass=0,armorMoment=0,protection=0;
- for(const p of PANELS){
-  const level=b.armor[p.id]||0;
-  const mass=p.area*areaScale*THICK[level]*STEEL;
-  armorMass+=mass;armorMoment+=mass*c.H*p.height;protection+=level;
- }
- const hailMass=b.hail?43:0;
- const spikeMass=b.spikes===2?168:b.spikes===1?112:0;
- const mass=c.mass+frameMass+armorMass+hailMass+spikeMass;
- const cg=(c.mass*c.cg+frameMoment+armorMoment+
- hailMass*(c.H+.12)+spikeMass*.25)/mass;
- const frontArea=c.area+tubeArea*.28+(b.hail?.12:0);
- const sideArea=c.L*c.H*.69+tubeArea;
- const cd=c.cd+Math.min(.28,tubeArea*.045)+(b.hail?.025:0);
- const crossCd=1.02+Math.min(.25,tubeArea*.04);
- const liftCd=clamp(.18+highArea*.07+(b.hail?.015:0),.18,.5);
- return {mass,cg,frameMass,armorMass,totalLength,frontArea,sideArea,
- cd,crossCd,liftCd,protection,
- anchor:b.spikes===2?85000:b.spikes===1?48000:0};
-}
-function refresh(){
- const c=car(),b=build();
- const e=engineering(c,b,mode==="garage"?draft:b.frame);
- $("bank").textContent=cash(state.cash);
- $("fleet").innerHTML=Object.keys(state.builds).map(id=>
- `<option value="${id}">${findCar(id).name}</option>`).join("");
- $("fleet").value=state.active;
- $("stats").innerHTML=[
- ["Vehicle",c.name],["Approx. stock mass",number(c.mass)+" kg"],
- ["Frame mass",number(e.frameMass)+" kg"],
- ["Armor mass",number(e.armorMass)+" kg"],
- ["Total mass",number(e.mass)+" kg"],
- ["Modeled frontal Cd",e.cd.toFixed(3)],
- ["Frontal effective area",e.frontArea.toFixed(2)+" m²"],
- ["Modeled center of gravity",e.cg.toFixed(2)+" m"],
- ["Integrity",Math.round(b.health)+"%"]
- ].map(([a,b])=>`<div class="stat"><span>${a}</span><b>${b}</b></div>`).join("");
- $("quote").textContent=
- `${e.totalLength.toFixed(1)} m tubing · ${number(e.frameMass)} kg frame · `+
- `Install new tubing: ${cash(quote())}`;
- $("panels").innerHTML=PANELS.map(p=>
- `<button data-panel="${p.id}">${p.label}: Level ${b.armor[p.id]||0}</button>`).join("");
- $("hail").textContent=b.hail?"Hail guard installed ✓":"Hail guard — $900";
- $("hail").disabled=b.hail;
- $("spikes").textContent=b.spikes?"Ground spikes installed ✓":"4 ground spikes — $1,800";
- $("spikes").disabled=!!b.spikes;
- $("strongSpikes").textContent=b.spikes===2?
- "Reinforced spikes installed ✓":"Reinforce spikes — $2,400";
- $("strongSpikes").disabled=b.spikes!==1;
- $("repair").textContent="Repair — "+cash(Math.ceil((100-b.health)*35));
- $("repair").disabled=b.health>=100;
- $("recover").disabled=state.builds.tahoe.health>=30;
- $("cars").innerHTML=VEHICLES.map(v=>
- `<div class="card"><h3>${v.name}</h3><small>${v.ref}</small>
- <p>${number(v.mass)} kg estimated curb mass<br>
- Cd ≈ ${v.cd.toFixed(2)} · ${v.L.toFixed(2)} m long</p>
- <button data-car="${v.id}" ${v.id===state.active?"disabled":""}>
- ${v.id===state.active?"Selected":state.builds[v.id]?
- "Select":"Buy — "+cash(v.price)}</button></div>`).join("");
-}
-function screens(){
- const live=mode==="storm";
- $("workshop").classList.toggle("hidden",mode!=="garage");
- $("dealership").classList.toggle("hidden",mode!=="dealer");
- $("fieldControls").classList.toggle("hidden",!live);
- $("upgrades").classList.toggle("hidden",live);
- $("telemetry").classList.toggle("hidden",!live);
- $("garageTab").classList.toggle("active",mode==="garage");
- $("dealerTab").classList.toggle("active",mode==="dealer");
- $("launch").disabled=live;
- $("title").textContent=live?"Live telemetry":"Vehicle engineering";
- refresh();
-}
-function switchMode(next){
- if(mode==="storm")return notify("Return from the intercept first.");
- mode=next;start=null;hover=null;screens();
- $("caption").textContent=next==="garage"?
- "LIVE BUILD: drag tubes over the vehicle. Apply your draft before intercepting.":
- "Your installed interceptor. Each vehicle keeps its own upgrades.";
-}
-$("garageTab").onclick=()=>switchMode("garage");
-$("dealerTab").onclick=()=>switchMode("dealer");
-$("fleet").onchange=e=>{
- state.active=e.target.value;loadDraft();save();refresh();
-};
-$("cars").onclick=e=>{
- const btn=e.target.closest("[data-car]");if(!btn)return;
- const c=findCar(btn.dataset.car);
- if(!state.builds[c.id]){
-  if(!pay(c.price))return;state.builds[c.id]=newBuild();
- }
- state.active=c.id;loadDraft();save();refresh();
-};
-$("paint").oninput=e=>{build().paint=e.target.value;save();};
-function setTool(t){
- tool=t;$("draw").classList.toggle("active",t==="draw");
- $("erase").classList.toggle("active",t==="erase");
-}
-$("draw").onclick=()=>setTool("draw");
-$("erase").onclick=()=>setTool("erase");
-$("undo").onclick=()=>{if(undo.length){draft=undo.pop();refresh();}};
-$("clear").onclick=()=>{remember();draft=[];refresh();};
-$("install").onclick=install;
-const CAGE=[
- [.08,.83,.08,.14],[.08,.14,.66,.10],[.66,.10,.93,.78],
- [.93,.78,.08,.83],[.08,.14,.65,.83],[.66,.10,.32,.83],
- [.32,.12,.32,.83]
-];
-const LOW=[
- [-.03,.95,.23,.14],[.23,.14,.65,.10],[.65,.10,1.04,.95],
- [1.04,.95,-.03,.95],[.23,.14,.23,.95],[.65,.10,.65,.95],
- [.23,.95,.65,.10]
-];
-document.querySelectorAll("[data-frame]").forEach(btn=>btn.onclick=()=>{
- remember();
- draft=copy(btn.dataset.frame==="low"?LOW:btn.dataset.frame==="heavy"?
- CAGE.concat([[.08,.83,.66,.10],[.08,.48,.80,.48],
- [-.03,.95,.08,.14],[.66,.10,1.04,.95]]):CAGE);
- refresh();notify("Preset preview loaded. Install to buy this frame.");
-});
-$("panels").onclick=e=>{
- const btn=e.target.closest("[data-panel]");if(!btn||mode==="storm")return;
- const p=PANELS.find(p=>p.id===btn.dataset.panel);
- const b=build(),old=b.armor[p.id]||0,level=+$("plate").value;
- if(level<=old)return notify("Select a higher armor level.");
- const scale=car().L*car().H/(5.18*1.89);
- const mass=p.area*scale*(THICK[level]-THICK[old])*STEEL;
- const cost=Math.round(mass*7+120);
- if(!confirm(`${p.label}, Level ${level}\nAdds ${number(mass)} kg\nCost ${cash(cost)}`))return;
- if(pay(cost)){b.armor[p.id]=level;save();refresh();}
-};
-$("hail").onclick=()=>{
- if(!build().hail&&pay(900)){build().hail=true;save();refresh();}
-};
-$("spikes").onclick=()=>{
- if(!build().spikes&&pay(1800)){build().spikes=1;save();refresh();}
-};
-$("strongSpikes").onclick=()=>{
- if(build().spikes===1&&pay(2400)){build().spikes=2;save();refresh();}
-};
-$("repair").onclick=()=>{
- if(pay(Math.ceil((100-build().health)*35))){
-  build().health=100;save();refresh();
- }
-};
-$("recover").onclick=()=>{
- // Prevent a no-money/no-drive dead end without erasing other builds.
- state.builds.tahoe.health=Math.max(30,state.builds.tahoe.health);
- state.active="tahoe";loadDraft();save();refresh();
- notify("Starter Tahoe recovered to 30% integrity at no charge.");
-};
-$("reset").onclick=()=>{
- if(mode==="storm")return notify("End the intercept first.");
- if(confirm("Delete all NTR-CEPT progress?")){
-  state=fresh();imageCache={};loadDraft();save();switchMode("garage");
- }
-};
-
-// Local images: bounded size, cached rendering, no network requirement.
-$("photoButton").onclick=()=>$("photoFile").click();
-$("photoFile").onchange=e=>{
- const file=e.target.files[0];e.target.value="";if(!file)return;
- if(!file.type.startsWith("image/"))return notify("Choose an image file.");
- const target=state.active,reader=new FileReader();
- reader.onload=()=>{
-  const img=new Image();
-  img.onload=()=>{
-   const scale=Math.min(1,1000/img.width,600/img.height);
-   const out=document.createElement("canvas");
-   out.width=Math.max(1,Math.round(img.width*scale));
-   out.height=Math.max(1,Math.round(img.height*scale));
-   out.getContext("2d").drawImage(img,0,0,out.width,out.height);
-   if(!state.builds[target])return;
-   state.builds[target].photo=out.toDataURL("image/png");
-   delete imageCache[target];save();
-   notify("Image imported. Crop tightly and face right for aligned overlays.");
-  };
-  img.onerror=()=>notify("Could not load that image.");
-  img.src=reader.result;
- };
- reader.onerror=()=>notify("Could not read the file.");
- reader.readAsDataURL(file);
-};
-$("removePhoto").onclick=()=>{
- build().photo=null;delete imageCache[state.active];save();
-};
-
-// Rendering helpers never clear the canvas inside a vehicle renderer.
-function line(x1,y1,x2,y2,color,width=1){
- ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
- ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
-}
-function poly(points,color,stroke,width=1){
- ctx.beginPath();points.forEach((p,i)=>i?
- ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();
- if(color){ctx.fillStyle=color;ctx.fill();}
- if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}
-}
-function text(t,x,y,size=15,color="#dceaf5",align="left"){
- ctx.font=`${size}px system-ui`;ctx.fillStyle=color;
- ctx.textAlign=align;ctx.fillText(t,x,y);
-}
-function vehicle(c,b,x,ground,w,frame=b.frame,down=false){
- const h=w*c.H/c.L,y=ground-h;
- const X=u=>x+u*w,Y=v=>y+v*h;
- const truck=c.kind==="truck"||c.kind==="heavy";
- let img=null;
- if(b.photo){
-  img=imageCache[c.id];
-  if(!img||img.datasetSource!==b.photo){
-   img=new Image();img.datasetSource=b.photo;img.src=b.photo;
-   imageCache[c.id]=img;
-  }
- }
- if(img&&img.complete&&img.naturalWidth){
-  // Tightly cropped image maps to the vehicle's complete side-view box.
-  ctx.drawImage(img,x,y,w,h);
- }else{
-  const roof=truck?.27:c.kind==="explorer"?.19:.16;
-  const body=truck?
-  [[.03,.55],[.39,.55],[.44,roof],[.66,roof],[.77,.50],
-   [.94,.55],[.99,.66],[.98,.83],[.04,.83]]:
-  [[.04,.82],[.03,.33],[.10,roof],[.67,roof],
-   [.79,.48],[.95,.54],[.99,.68],[.98,.83]];
-  poly(body.map(p=>[X(p[0]),Y(p[1])]),b.paint,"#071019",2);
-  const windows=truck?
-   [[[.45,.32],[.55,.32],[.55,.51],[.43,.51]],
-    [[.57,.32],[.65,.32],[.74,.51],[.57,.51]]]:
-   [[[.10,.23],[.29,.23],[.29,.48],[.08,.48]],
-    [[.32,.23],[.49,.23],[.49,.48],[.32,.48]],
-    [[.52,.23],[.65,.23],[.75,.48],[.52,.48]]];
-  windows.forEach(p=>poly(p.map(q=>[X(q[0]),Y(q[1])]),
-   "#214355","#7b95a8",1));
-  for(const u of truck?[.40,.57]:[.31,.51])
-   line(X(u),Y(.52),X(u),Y(.80),"#6a7c89",1);
-  line(X(.05),Y(.77),X(.96),Y(.77),"#8f9eaa",2);
-  if(truck)line(X(.04),Y(.55),X(.39),Y(.55),"#101b26",4);
-  ctx.fillStyle="#fff0bd";ctx.fillRect(X(.95),Y(.59),w*.025,h*.085);
-  ctx.fillStyle="#ef6473";ctx.fillRect(X(.035),Y(.53),w*.018,h*.18);
-  ctx.fillStyle="#526574";ctx.fillRect(X(.96),Y(.74),w*.04,h*.08);
-  for(const u of [.205,.81]){
-   const r=h*.18,cx=X(u),cy=ground-r;
-   ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
-   ctx.fillStyle="#090f17";ctx.fill();
-   ctx.strokeStyle="#3b4654";ctx.lineWidth=3;ctx.stroke();
-   ctx.beginPath();ctx.arc(cx,cy,r*.56,0,Math.PI*2);
-   ctx.fillStyle="#a6b8c5";ctx.fill();
-   for(let a=0;a<Math.PI*2;a+=Math.PI/3)
-    line(cx,cy,cx+Math.cos(a)*r*.48,cy+Math.sin(a)*r*.48,"#536675",2);
-   if(c.kind==="heavy"){
-    ctx.beginPath();ctx.arc(cx-3,cy,r*.86,0,Math.PI*2);
-    ctx.strokeStyle="#81909c";ctx.lineWidth=2;ctx.stroke();
-   }
-  }
-  text(c.kind==="yukon"?"GMC":c.id==="tahoe"?"CHEV":"FORD",
-   X(.88),Y(.74),Math.max(8,w*.018),"#e5edf5","center");
- }
- const plates={
- side:[[.09,.54],[.76,.54],[.80,.76],[.09,.76]],
- roof:[[truck?.43:.09,.12],[truck?.67:.68,.12],
-       [truck?.69:.70,.18],[truck?.42:.08,.18]],
- hood:[[.80,.48],[.95,.54],[.96,.59],[.80,.58]],
- glass:truck?[[.44,.30],[.66,.30],[.75,.51],[.42,.51]]:
- [[.08,.23],[.65,.23],[.75,.48],[.07,.48]],
- bumper:[[.97,.55],[1.015,.58],[1.015,.86],[.97,.86]]
- };
- for(const p of PANELS){
-  const level=b.armor[p.id]||0;if(!level)continue;
-  const points=plates[p.id].map(q=>[X(q[0]),Y(q[1])]);
-  poly(points,["","#758493","#566675","#374856"][level],"#bed0d8",1.5);
-  for(const q of points){
-   ctx.beginPath();ctx.arc(q[0],q[1],Math.max(1,w*.003),0,Math.PI*2);
-   ctx.fillStyle="#dfecf1";ctx.fill();
-  }
-  if(p.id==="glass")
-   for(let i=0;i<5;i++)line(X(.16+i*.10),Y(.37),
-    X(.21+i*.10),Y(.37),"#12202c",h*.022);
-  if(p.id==="bumper")poly([[X(-.015),Y(.60)],[X(.05),Y(.60)],
-   [X(.05),Y(.86)],[X(-.015),Y(.86)]],"#566675","#bed0d8");
- }
- for(const s of frame){
-  line(X(s[0]),Y(s[1]),X(s[2]),Y(s[3]),"#111b25",w*.015);
-  line(X(s[0]),Y(s[1]),X(s[2]),Y(s[3]),"#dba453",w*.010);
-  line(X(s[0]),Y(s[1])-1,X(s[2]),Y(s[3])-1,"#f9d392",w*.002);
-  for(const q of [[s[0],s[1]],[s[2],s[3]]]){
-   ctx.beginPath();ctx.arc(X(q[0]),Y(q[1]),w*.006,0,Math.PI*2);
-   ctx.fillStyle="#ffe0a0";ctx.fill();
-  }
- }
- if(b.hail){
-  const a=truck?.42:.08,z=truck?.69:.71;
-  line(X(a),Y(.035),X(z),Y(.035),"#bedbe7",w*.006);
-  line(X(a),Y(.105),X(z),Y(.105),"#bedbe7",w*.006);
-  for(let u=a;u<z;u+=.035)
-   line(X(u),Y(.035),X(u),Y(.14),"#a4c8d9",w*.0025);
-  [a+.02,z-.02].forEach(u=>line(X(u),Y(.105),X(u),Y(.24),"#bedbe7",w*.005));
- }
- if(b.spikes)for(const u of [.10,.38,.68,.92]){
-  ctx.fillStyle=b.spikes===2?"#efbc51":"#77c2d2";
-  ctx.fillRect(X(u)-w*.011,Y(.74),w*.022,h*.12);
-  const end=down?ground+h*.12:Y(.91);
-  line(X(u),Y(.80),X(u),end,"#d4e8ee",w*.007);
-  poly([[X(u)-w*.012,end-5],[X(u)+w*.012,end-5],[X(u),end+6]],"#e2f2f7");
- }
- if(b.health<50)
-  line(X(.53),Y(.59),X(.67),Y(.75),"#0b141e",2);
-}
-function editor(){
- const w=565,h=w*car().H/car().L;
- return {x:215,w,h,y:435-h,ground:435};
-}
-function garageScene(){
- ctx.fillStyle="#111d2a";ctx.fillRect(0,0,1000,560);
- for(let x=0;x<1000;x+=25)line(x,90,x,460,"#203346");
- for(let y=90;y<460;y+=25)line(0,y,1000,y,"#203346");
- ctx.fillStyle="#1b2937";ctx.fillRect(0,435,1000,125);
- line(0,435,1000,435,"#7892a5",2);
- text(mode==="dealer"?"INTERCEPTOR FLEET":"LIVE ENGINEERING BAY",25,39,22,"#70f1cf");
- text(car().name,25,69,17);
- text("FRONT →",970,68,14,"#a3becf","right");
- const r=editor();
- vehicle(car(),build(),r.x,r.ground,r.w,mode==="garage"?draft:build().frame);
- if(mode==="garage"){
-  ctx.setLineDash([5,5]);ctx.strokeStyle="#66849d";
-  ctx.strokeRect(r.x-r.w*.08,r.y-r.h*.30,r.w*1.16,r.h*1.30);
-  ctx.setLineDash([]);
-  if(start&&hover){
-   const end=editPoint(hover);
-   line(r.x+start[0]*r.w,r.y+start[1]*r.h,
-    r.x+end[0]*r.w,r.y+end[1]*r.h,"#7cffd6",4);
-  }
-  text(tool==="draw"?"DRAG TO WELD • GOLD TUBES ARE YOUR FRAME":
-   "CLICK A TUBE TO ERASE IT",25,496,15,"#b8d6e6");
- }else text("Installed frame and equipment shown.",25,496,15);
- text("ARMOR • HAIL GUARD • HYDRAULIC GROUND SPIKES",25,532,13,"#809db3");
-}
-function point(e){
- const r=canvas.getBoundingClientRect();
- return {x:(e.clientX-r.left)*1000/r.width,
- y:(e.clientY-r.top)*560/r.height};
-}
-function editPoint(p){
- const r=editor();
- return [Math.round(clamp((p.x-r.x)/r.w,-.08,1.08)*50)/50,
- Math.round(clamp((p.y-r.y)/r.h,-.30,1)*50)/50];
-}
-function inside(p){
- const r=editor();
- return p.x>=r.x-r.w*.08&&p.x<=r.x+r.w*1.08&&
- p.y>=r.y-r.h*.30&&p.y<=r.ground;
-}
-function tubeDistance(p,s){
- const r=editor(),ax=r.x+s[0]*r.w,ay=r.y+s[1]*r.h;
- const dx=(s[2]-s[0])*r.w,dy=(s[3]-s[1])*r.h;
- const t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(dx*dx+dy*dy||1),0,1);
- return Math.hypot(p.x-ax-dx*t,p.y-ay-dy*t);
-}
-canvas.onpointerdown=e=>{
- if(mode!=="garage")return;
- const p=point(e);if(!inside(p))return;
- e.preventDefault();canvas.setPointerCapture(e.pointerId);hover=p;
- if(tool==="erase"){
-  let index=-1,min=16;
-  draft.forEach((s,i)=>{const d=tubeDistance(p,s);if(d<min){min=d;index=i;}});
-  if(index>=0){remember();draft.splice(index,1);refresh();}
- }else start=editPoint(p);
-};
-canvas.onpointermove=e=>{hover=point(e);};
-canvas.onpointerup=e=>{
- if(mode!=="garage"||!start)return;
- const s=[...start,...editPoint(point(e))];start=null;
- if(length(s,car())<.15)return;
- if(draft.length>=80)return notify("Maximum 80 tubes.");
- if(draft.some(t=>key(t)===key(s)))return;
- remember();draft.push(s);refresh();
-};
-canvas.onpointercancel=()=>{start=null;};
-canvas.onpointerleave=()=>{if(!start)hover=null;};
-
-// Shared force-based gameplay model.
-function launch(){
- if(mode==="storm")return;
- if(build().health<25)return notify("Repair or recover the Tahoe before launching.");
- if(JSON.stringify(draft)!==JSON.stringify(build().frame)){
-  if(!confirm("Install this frame draft before launch?\n"+cash(quote())))return;
-  if(!install())return;
- }
- const grade=Math.floor(random(0,6));
- const bands=[[24,35],[36,48],[49,60],[61,74],[75,89],[90,105]];
- storm={
-  grade,maxWind:random(...bands[grade]),radius:random(30,60)+grade*6,
-  tx:random(220,320),tv:random(-3,5),time:0,duration:70,
-  x:0,vx:0,y:0,vy:0,roll:0,rollV:0,health:build().health,
-  anchors:false,paused:false,soil:random(.55,1),
-  hail:random(.25,1),seed:random(0,30),
-  wind:0,drag:0,lift:0,tip:0,earned:0,data:0,peak:0,
-  probes:[],e:engineering(car(),build())
- };
- mode="storm";keys={};screens();
- $("forecast").textContent=
- `Random EF${grade}-like gameplay scenario. Peak wind around `+
- `${Math.round(storm.maxWind*2.237)} mph. `+
- `Core radius ${Math.round(storm.radius)} m. `+
- (storm.soil<.75?"Soft soil: weak anchor holding. ":"Firm soil. ")+
- (storm.hail>.7?"Heavy hail.":"Scattered hail.");
- $("caption").textContent="Your installed build is active. Approach, collect data, and escape.";
- $("pause").textContent="Pause";
- notify("Intercept started. Brake before deploying spikes.");
-}
-$("launch").onclick=launch;
-function windAt(x){
- const s=storm,d=x-s.tx,r=Math.abs(d);
- const ratio=r<s.radius?r/s.radius:s.radius/Math.max(r,1);
- const gust=1+.08*Math.sin(s.time*2.8+s.seed)+.04*Math.sin(s.time*6.3);
- const speed=s.maxWind*ratio*gust;
- return {u:-Math.sign(d||1)*speed+5,
- up:s.maxWind*.25*Math.exp(-(r/(s.radius*.75))**2),
- speed};
-}
-function anchors(){
- if(mode!=="storm"||storm.paused)return;
- const s=storm;
- if(!build().spikes)return notify("Install ground spikes first.");
- if(s.anchors){s.anchors=false;return notify("Spikes retracted.");}
- if(Math.abs(s.vx)>2)return notify("Brake below 4.5 mph before anchoring.");
- if(s.y>.02||Math.abs(s.roll)>.15)return notify("Land upright before anchoring.");
- s.anchors=true;s.vx=0;notify("Ground spikes deployed.");
-}
-function probe(){
- if(mode!=="storm"||storm.paused)return;
- if(storm.probes.length>=4)return notify("Four probes maximum.");
- if(storm.y>.1)return notify("Land before dropping a probe.");
- if(pay(250)){
-  storm.probes.push({x:storm.x,pay:0});save();
-  $("bank").textContent=cash(state.cash);notify("Probe deployed.");
- }
-}
-function pause(){
- if(mode!=="storm")return;
- storm.paused=!storm.paused;keys={};
- $("pause").textContent=storm.paused?"Resume":"Pause";
-}
-$("anchor").onclick=anchors;
-$("probe").onclick=probe;
-$("pause").onclick=pause;
-$("return").onclick=()=>finish(false,"Evacuated.");
-function step(dt){
- const s=storm,c=car(),b=build(),e=s.e;
- s.time+=dt;
- s.tx+=s.tv*dt;
- s.tv=clamp(s.tv+Math.sin(s.time*.2+s.seed)*dt*.12,-4,6);
- const w=windAt(s.x),rel=w.u-s.vx;
- // Blend estimated frontal and side loading with a varying wind yaw.
- const yaw=.65+.28*Math.sin(s.time*.35+s.seed);
- const cdA=e.cd*e.frontArea*(1-yaw)+e.crossCd*e.sideArea*yaw;
- const aero=.5*RHO*cdA*rel*Math.abs(rel);
- const anchor=e.anchor*s.soil*(s.anchors?1:0);
- const lift=.5*RHO*e.liftCd*(c.L*c.W)*w.speed**2+
- .5*RHO*.7*(c.L*c.W)*w.up**2;
- const gravity=e.mass*G,normal=Math.max(0,gravity-lift);
- const grounded=s.y<=.001;
- const drive=(keys.KeyD||keys.ArrowRight?1:0)-
- (keys.KeyA||keys.ArrowLeft?1:0);
- const brake=!!keys.Space;
- const tire=grounded?normal*.78:0;
- const motor=grounded&&!s.anchors&&!brake?
- drive*Math.min(10500,c.power/Math.max(7,Math.abs(s.vx))):0;
- let force=aero+clamp(motor,-tire,tire);
- if(grounded){
-  const resist=normal*(brake?.72:drive?.025:.055);
-  if(Math.abs(s.vx)<.12&&Math.abs(force)<=resist){force=0;s.vx=0;}
-  else force-=Math.sign(s.vx||force)*resist;
- }
- if(s.anchors&&grounded){
-  const capacity=anchor*.75;
-  if(Math.abs(force)<=capacity){force=0;s.vx=0;}
-  else{
-   force-=Math.sign(force)*capacity;s.anchors=false;s.health-=5;
-   notify("Spikes tore loose from the soil!");
-  }
- }
- const oldV=s.vx;
- s.vx+=force/e.mass*dt;
- // Prevent numerical brake chatter around zero.
- if(grounded&&!drive&&oldV*s.vx<0&&Math.abs(aero)<normal*(brake?.72:.055))
-  s.vx=0;
- s.vx=clamp(s.vx,-42,42);s.x+=s.vx*dt;
- const vertical=lift-gravity-(s.anchors?anchor*.7:0);
- if(grounded&&vertical<=0){s.y=0;s.vy=0;}
- else{
-  s.vy+=(vertical/e.mass-s.vy*.7)*dt;s.y+=s.vy*dt;
-  if(s.y<0){
-   if(s.vy<-2)s.health-=Math.min(40,s.vy*s.vy*.4);
-   s.y=0;s.vy=0;
-  }
- }
- // Dimensionally consistent moment ratio; motion remains a heuristic.
- const pressureHeight=c.H*.48+e.cg*.24;
- const moment=Math.abs(aero)*pressureHeight;
- const restoring=Math.max(0,gravity-lift*.6)*c.track*.5+
- anchor*c.track*.35;
- s.tip=moment/Math.max(1,restoring);
- if(s.tip>1||s.y>.2)
-  s.rollV+=(Math.sign(aero||1)*Math.min(4,Math.max(.2,s.tip-1))*1.1-
-   s.rollV*.7)*dt;
- else s.rollV+=(-s.roll*5-s.rollV*3)*dt;
- s.roll+=s.rollV*dt;
- const armor=1+e.protection*.35;
- const exposure=clamp(w.speed/65,0,2);
- const hail=s.hail*exposure*(b.hail?.06:.45)/
- (1+(b.armor.roof||0)*.35);
- const debris=Math.max(0,w.speed-22)*.017/armor;
- s.health=clamp(s.health-(hail+debris+Math.max(0,s.tip-.9)*.4)*dt,0,100);
- s.wind=Math.hypot(w.speed,w.up);s.drag=Math.abs(aero);s.lift=lift;
- s.peak=Math.max(s.peak,s.wind);
- const quality=clamp(w.speed/s.maxWind,0,1.15);
- if(Math.abs(s.x-s.tx)<160&&w.speed>15){
-  s.data+=quality*dt;
-  s.earned+=(35+s.grade*16)*quality*(s.anchors?1.15:1)*dt;
- }
- for(const p of s.probes){
-  const pw=windAt(p.x).speed;
-  if(pw>18)p.pay+=(14+s.grade*6)*clamp(pw/s.maxWind,0,1)*dt;
- }
- if(s.health<=0)return finish(true,"Vehicle disabled.");
- if(Math.abs(s.roll)>1.45)return finish(true,"Vehicle overturned.");
- if(s.y>18)return finish(true,"Vehicle lofted.");
- if(s.time>=s.duration)finish(false,"Intercept complete.");
-}
-function finish(lost,reason){
- if(mode!=="storm")return;
- const s=storm;
- const probePay=s.probes.reduce((sum,p)=>sum+p.pay,0);
- const returnGrant=!lost&&s.time>=10?250:0;
- const reward=Math.round(s.earned*(lost?.45:1)+probePay+returnGrant);
- state.cash+=reward;state.runs++;
- build().health=lost?10:Math.max(1,s.health);
- mode="garage";keys={};loadDraft();save();screens();
- $("caption").textContent=
- `${reason} Earned ${cash(reward)} · Data ${s.data.toFixed(1)} s · `+
- `Peak ${Math.round(s.peak*2.237)} mph. `+
- (lost?"Vehicle towed home; repair required.":"Returned to garage.");
- notify(reason+" Research payout: "+cash(reward));
-}
-function telemetry(){
- if(mode!=="storm")return;
- const s=storm;$("health").value=s.health;
- $("readout").innerHTML=
- `Wind: <b>${Math.round(s.wind*2.237)} mph</b><br>`+
- `Vehicle: ${Math.round(Math.abs(s.vx)*2.237)} mph<br>`+
- `Wind load: ${(s.drag/1000).toFixed(1)} kN<br>`+
- `Lift: ${(s.lift/1000).toFixed(1)} kN<br>`+
- `Overturn ratio: ${s.tip.toFixed(2)} ${s.tip>1?"— DANGER":""}<br>`+
- `Height: ${s.y.toFixed(1)} m<br>`+
- `Distance: ${Math.round(Math.abs(s.tx-s.x))} m<br>`+
- `Data: ${s.data.toFixed(1)} s<br>`+
- `Estimated payout: ${cash(s.earned)}<br>`+
- `Probes: ${s.probes.length}/4`;
- $("anchor").textContent=s.anchors?"Retract spikes [X]":"Deploy spikes [X]";
-}
-function stormScene(){
- const s=storm,c=car(),ground=440,scale=2.5;
- const camera=s.x-130,X=x=>(x-camera)*scale;
- const sky=ctx.createLinearGradient(0,0,0,ground);
- sky.addColorStop(0,"#101827");sky.addColorStop(.65,"#394955");
- sky.addColorStop(1,"#748078");
- ctx.fillStyle=sky;ctx.fillRect(0,0,1000,560);
- for(let i=0;i<8;i++){
-  const x=((i*180-camera*.2)%1400+1400)%1400-200;
-  ctx.beginPath();ctx.ellipse(x,45+i%3*25,170,45,0,0,Math.PI*2);
-  ctx.fillStyle=i%2?"#202e3c":"#2c3b48";ctx.fill();
- }
- poly([[0,421],[180,398],[390,419],[630,391],
- [820,413],[1000,402],[1000,465],[0,465]],"#455747");
- ctx.fillStyle="#343c31";ctx.fillRect(0,ground,1000,120);
- ctx.fillStyle="#50574d";ctx.fillRect(0,ground,1000,18);
- line(0,ground,1000,ground,"#91a28a",2);
- for(let i=0;i<18;i++){
-  const x=((i*80-camera*scale)%1450+1450)%1450-200;
-  line(x,ground+24,x+34,ground+24,"#bab17d",3);
- }
- const tx=X(s.tx),radius=s.radius*scale*.6;
- for(let layer=4;layer>=0;layer--){
-  const pts=[];
-  for(let i=0;i<=24;i++){
-   const q=i/24,y=65+(ground-65)*q;
-   const sw=Math.sin(q*8+s.time*1.4)*18;
-   const r=radius*(1.15-.87*q)*(1+layer*.06);
-   pts.push([tx+sw-r,y]);
-  }
-  for(let i=24;i>=0;i--){
-   const q=i/24,y=65+(ground-65)*q;
-   const sw=Math.sin(q*8+s.time*1.4)*18;
-   const r=radius*(1.15-.87*q)*(1+layer*.06);
-   pts.push([tx+sw+r,y]);
-  }
-  poly(pts,`rgba(${40+layer*10},${48+layer*10},${54+layer*10},.29)`);
- }
- for(let i=0;i<16;i++){
-  const q=i/16;
-  ctx.beginPath();ctx.ellipse(tx+Math.sin(s.time*3+i)*9,
-   75+q*350,radius*(1.1-q*.85),8,0,0,Math.PI*2);
-  ctx.strokeStyle="#b8c8c119";ctx.lineWidth=3;ctx.stroke();
- }
- ctx.beginPath();ctx.ellipse(tx,ground,radius*.7,23,0,0,Math.PI*2);
- ctx.fillStyle="#777a626e";ctx.fill();
- for(let i=0;i<34;i++){
-  const a=s.time*(2+i%3)+i*4.3,r=radius*(.2+(i%6)*.07);
-  ctx.fillStyle=i%2?"#504936":"#a59b79";
-  ctx.fillRect(tx+Math.cos(a)*r,ground-8-i%8*13+Math.sin(a)*8,6,4);
- }
- for(const p of s.probes){
-  const x=X(p.x);
-  poly([[x-7,ground],[x+7,ground],[x,ground-17]],"#69efc9","#d9fff1");
-  line(x,ground-17,x,ground-27,"#dcfff7",2);
- }
- const px=X(s.x),w=c.L*34,h=w*c.H/c.L,gy=ground-s.y*scale;
- if(s.y>.1){
-  ctx.beginPath();ctx.ellipse(px,ground+3,70,8,0,0,Math.PI*2);
-  ctx.fillStyle="#0005";ctx.fill();
- }
- ctx.save();ctx.translate(px,gy-h*.5);ctx.rotate(s.roll);
- vehicle(c,{...build(),health:s.health},-w*.5,h*.5,w,build().frame,s.anchors);
- ctx.restore();
- const rainCount=Math.floor(35+Math.min(65,s.wind)*s.hail);
- for(let i=0;i<rainCount;i++){
-  const x=((i*97+s.time*(130+s.wind*3))%1150)-70;
-  const y=(i*57+s.time*320)%500;
-  line(x,y,x-8,y+14,"#d2e4f142");
-  if(i%8===0){ctx.fillStyle="#e6f6ffb0";ctx.fillRect(x,y,3,3);}
- }
- ctx.fillStyle="#081321db";ctx.fillRect(15,15,365,104);
- text(`EF${s.grade}-LIKE · ${Math.ceil(s.duration-s.time)} s remaining`,30,43,19,"#79f4d4");
- text(`Wind ${Math.round(s.wind*2.237)} mph · Vehicle ${Math.round(Math.abs(s.vx)*2.237)} mph`,30,71);
- text(`Spikes ${s.anchors?"DEPLOYED":"RETRACTED"} · Data ${s.data.toFixed(1)} s`,30,99,14);
- text(`Funnel ${Math.round(Math.abs(s.tx-s.x))} m ${s.tx>s.x?"→":"←"}`,
- 975,36,18,"#f2deb2","right");
- if(tx<0||tx>1000)text(tx>1000?"TORNADO →":"← TORNADO",
- tx>1000?975:25,205,22,"#ffd17e",tx>1000?"right":"left");
- if(s.tip>1||s.y>.2){
-  ctx.fillStyle="#ba34422b";ctx.fillRect(0,0,1000,560);
-  text(s.y>.2?"LIFTING — EVACUATE!":"OVERTURN RISK!",
-   500,153,25,"#ff94a2","center");
- }
- if(s.anchors)text("ANCHORED",px,gy-h-18,14,"#77ffce","center");
- ctx.fillStyle="#091524e8";ctx.fillRect(0,510,1000,50);
- text("A / D DRIVE   SPACE BRAKE   X SPIKES   P PROBE",20,541,13,"#a4c1d4");
- text(`INTEGRITY ${Math.round(s.health)}%`,975,541,16,
- s.health<35?"#ff9aa6":"#b9f4d8","right");
- if(s.paused){
-  ctx.fillStyle="#06101b99";ctx.fillRect(0,0,1000,560);
-  text("PAUSED",500,270,38,"#a4ffdf","center");
- }
-}
-
-// Keyboard and touch support; no multiple animation-loop starts.
-window.addEventListener("keydown",e=>{
- if(["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName))return;
- if(mode!=="storm")return;
- if(["KeyA","KeyD","ArrowLeft","ArrowRight","Space","KeyX","KeyP"].includes(e.code))
-  e.preventDefault();
- keys[e.code]=true;
- if(!e.repeat&&e.code==="KeyX")anchors();
- if(!e.repeat&&e.code==="KeyP")probe();
-});
-window.addEventListener("keyup",e=>{keys[e.code]=false;});
-window.addEventListener("blur",()=>{
- keys={};
- if(mode==="storm"&&!storm.paused)pause();
-});
-document.addEventListener("visibilitychange",()=>{
- keys={};
- if(document.hidden&&mode==="storm"&&!storm.paused)pause();
-});
-document.querySelectorAll("[data-hold]").forEach(btn=>{
- btn.onpointerdown=e=>{
-  e.preventDefault();btn.setPointerCapture(e.pointerId);
-  keys[btn.dataset.hold]=true;
- };
- for(const event of ["pointerup","pointercancel","lostpointercapture"])
-  btn.addEventListener(event,()=>{keys[btn.dataset.hold]=false;});
-});
-let last=performance.now(),accumulator=0,uiTime=0;
-const FIXED=1/120;
-function loop(now){
- const dt=Math.min(.05,(now-last)/1000);last=now;
- if(mode==="storm"&&!storm.paused&&!document.hidden){
-  accumulator+=dt;
-  while(accumulator>=FIXED&&mode==="storm"){
-   step(FIXED);accumulator-=FIXED;
-  }
- }else accumulator=0;
- ctx.clearRect(0,0,1000,560);
- if(mode==="storm")stormScene();else garageScene();
- uiTime+=dt;
- if(uiTime>.2){uiTime=0;telemetry();}
- requestAnimationFrame(loop);
-}
-loadDraft();switchMode("garage");requestAnimationFrame(loop);
-</script>
-</body>
-</html>
+const $=s=>document.querySelector(s),CS=.35,CO=26,RO=10,PX=14,RHO=1.2,G=9.81,cl=(x,a,b)=>Math.max(a,Math.min(b,x));
+// Real-world specs: curb mass (kg), drag coefficient, dimensions (m)
+const V={
+tahoe:{n:'Chevrolet Tahoe',p:0,m:2540,cd:.37,L:5.18,W:2.04,H:1.93,wb:3.07,c:0x34465e,cab:[-.4,.14],t:0},
+explorer:{n:'2011 Ford Explorer',p:5000,m:2050,cd:.37,L:5.02,W:2.0,H:1.8,wb:2.86,c:0xe4e8ea,cab:[-.4,.1],t:0},
+yukon:{n:'2011 GMC Yukon',p:9000,m:2450,cd:.38,L:5.13,W:2.0,H:1.95,wb:2.95,c:0x1a1c20,cab:[-.4,.14],t:0},
+f150:{n:'Ford F-150',p:12000,m:2270,cd:.40,L:5.9,W:2.0,H:1.95,wb:3.68,c:0x1c55a8,cab:[-.12,.3],t:1},
+f350:{n:'Ford F-350 Dually',p:20000,m:3200,cd:.45,L:6.7,W:2.4,H:2.05,wb:4.1,c:0xb3261e,cab:[-.1,.3],t:1,d:1}};
+const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900];
+let S={cr:3000,own:{tahoe:1},sel:'tahoe',cfg:{}};
+try{const j=localStorage.getItem('ntrcept');if(j)S=JSON.parse(j)}catch(e){}
+const cfgOf=k=>S.cfg[k]||(S.cfg[k]={cells:[],armor:0,hg:0,spk:0});
+const save=()=>{try{localStorage.setItem('ntrcept',JSON.stringify(S))}catch(e){}};
+function msg(t){const m=$('#msg');m.textContent=t;m.style.opacity=1;clearTimeout(msg.t);msg.t=setTimeout(()=>m.style.opacity=0,2200)}
+// ---------- three.js ----------
+const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.5,4000);
+sc.background=new THREE.Color(0x56626e);sc.fog=new THREE.Fog(0x56626e,200,1800);
+sc.add(new THREE.HemisphereLight(0xdde6ee,0x3a4a30,.95));const sun=new THREE.DirectionalLight(0xffffff,.7);sun.position.set(50,100,30);sc.add(sun);
+{const q=document.createElement('canvas');q.width=q.height=256;const x=q.getContext('2d');for(let i=0;i<8;i++){x.fillStyle=i%2?'#4d6b3a':'#5a7d44';x.fillRect(0,i*32,256,32)}
+const tx=new THREE.CanvasTexture(q);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(300,300);
+const g=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),new THREE.MeshStandardMaterial({map:tx,roughness:1}));g.rotation.x=-Math.PI/2;sc.add(g);
+for(let i=0;i<90;i++){const a=Math.random()*6.28,d=40+Math.random()*1800,x=Math.cos(a)*d,z=Math.sin(a)*d;
+if(i<20){const h=new THREE.Mesh(new THREE.BoxGeometry(12,6,9),new THREE.MeshStandardMaterial({color:0xd8d2c4}));h.position.set(x,3,z);sc.add(h)}
+else{const t=new THREE.Mesh(new THREE.ConeGeometry(3,12,7),new THREE.MeshStandardMaterial({color:0x2f5a2c}));t.position.set(x,6,z);sc.add(t)}}}
+const U=new THREE.BoxGeometry(1,1,1),WG=new THREE.CylinderGeometry(.42,.42,.3,16),SG=new THREE.ConeGeometry(.09,.8,8),mats={};WG.rotateX(Math.PI/2);SG.rotateX(Math.PI);
+const M=(c,o={})=>mats[c+JSON.stringify(o)]||(mats[c+JSON.stringify(o)]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5,metalness:.3},o)));
+const B=(g,w,h,d,x,y,z,m)=>{const q=new THREE.Mesh(U,m);q.scale.set(w,h,d);q.position.set(x,y,z);g.add(q);return q};
+// builds the vehicle exactly as configured: body, armor, hail guard, spikes, drawn frame
+function mk(k,c,dep){
+const v=V[k],g=new THREE.Group(),L=v.L,W=v.W,H=v.H,bd=M(v.c),gl=M(0x0a0e12,{metalness:.9,roughness:.1}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
+const lx=v.t?a:-L/2;B(g,L/2-lx,.62,W,(lx+L/2)/2,.72,0,bd);
+B(g,cw,ch,W*.94,cx,1.03+ch/2,0,bd);B(g,cw*1.01,ch*.55,W*.97,cx,1.03+ch*.62,0,gl);
+if(v.t){B(g,a+L/2,.12,W,(a-L/2)/2,.82,0,bd);for(const s of[-1,1])B(g,a+L/2,.5,.1,(a-L/2)/2,1.06,s*(W/2-.05),bd);B(g,.1,.5,W,-L/2,1.06,0,bd)}
+B(g,.06,.3,W*.8,L/2,.85,0,M(0x111111));for(const s of[-1,1]){B(g,.08,.14,.4,L/2,.98,s*W*.36,M(0xfff6c8,{emissive:0xaaa070}));B(g,.08,.14,.3,-L/2,.98,s*W*.4,M(0xcc1111,{emissive:0x550000}))}
+for(const x of[wb=v.wb/2+.2,-v.wb/2+(v.t?-.3:-.2)])for(const s of[-1,1]){const w=new THREE.Mesh(WG,M(0x111111,{metalness:0,roughness:.9}));w.position.set(x,.42,s*(W/2-.15));g.add(w);
+if(v.d&&x<0){const w2=w.clone();w2.position.z=s*(W/2-.5);g.add(w2)}}
+var wb;
+const n=c.armor;if(n){const st=M(new THREE.Color().setHSL(.58,.12,.55-n*.07).getHex(),{metalness:.7});
+B(g,L*.8,.5,W+.1,0,.75,0,st);
+if(n>1){B(g,.35,.5,W+.1,L/2,.7,0,st);B(g,.35,.5,W+.1,-L/2,.7,0,st);B(g,L/2-b,.08,W*.98,(b+L/2)/2,1.06,0,st)}
+if(n>2){B(g,cw+.1,.1,W,cx,H+.05,0,st);B(g,cw*.95,ch*.5,W+.1,cx,1.03+ch*.3,0,st)}
+if(n>3)for(let i=0;i<5;i++)B(g,.06,ch*.55,W+.05,a+cw*(i+.5)/5,1.03+ch*.62,0,st)}
+if(c.hg){const m=M(0x9fb0ba),y=H+.3;for(let i=0;i<=6;i++)B(g,.04,.04,W*1.02,a+cw*i/6,y,0,m);for(let j=0;j<=3;j++)B(g,cw*1.05,.04,.04,cx,y,-W/2+W*j/3,m);for(const x of[a,b])for(const s of[-1,1])B(g,.05,.3,.05,x,H+.15,s*W/2*.97,m)}
+const sp=new THREE.Group(),sm=M(0xcfd6db,{metalness:.9});
+for(let i=0;i<c.spk*4;i++){const q=new THREE.Mesh(SG,sm),r=i<4;q.position.set([1,1,-1,-1][i%4]*L*(r?.38:.14),dep?.4:.95,[1,-1,1,-1][i%4]*(W/2-.25));sp.add(q)}
+g.add(sp);g.userData.sp=sp;
+const fm=M(0xe0701c,{metalness:.6}),h=new Set(c.cells);
+c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
+for(const s of[-1,1])B(g,CS,CS,.1,wx,wy,s*(W/2+.07),fm);
+if(!h.has(x+','+(y+1)))B(g,CS,.09,W+.14,wx,wy+CS/2,0,fm);
+if(!h.has((x+1)+','+y))B(g,.09,CS,W+.14,wx+CS/2,wy,0,fm)});
+g.rotation.order='YXZ';return g}
+// aerodynamics model inputs from build
+function stats(k,c){const v=V[k],s=new Set(c.cells),h=(x,y)=>s.has(x+','+y),[a,b]=v.cab.map(f=>f*v.L);let nb=0,nr=0,out=0,cab=0,mt=0;
+c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
+if(!h(x+1,y)){h(x+1,y-1)?nr++:nb++}
+if(!(Math.abs(wx)<v.L/2&&wy>.41&&wy<1.03||wx>a&&wx<b&&wy>1.03&&wy<v.H))out++;
+if(wx>a-CS*1.5&&wx<b+CS*1.5&&wy>1.03&&wy<v.H+CS*1.5)cab++;mt=Math.max(mt,wy+CS/2)});
+const area=((b-a)/CS+3)*((v.H-1.03)/CS+1.5);
+return{m:v.m+c.cells.length*14+c.armor*150*v.L/5.2+c.hg*55+c.spk*45,cdf:v.cd+.012*nb+.003*nr+c.armor*.012+c.hg*.02,cds:1.15+.0015*out+c.hg*.02,
+af:v.W*v.H*.85+Math.max(0,mt-v.H)*v.W,as:v.L*v.H*.72+out*CS*CS,pm:1-.5*Math.min(1,cab/area*1.6),hold:[0,14e3,3e4][c.spk],n:c.cells.length}}
+// drag = .5*rho*Cd*A*v^2, lift = .5*rho*Cl*Aplan*v^2; slide if drag > mu*(mg-lift)+anchor; roll if overturn moment > restoring moment
+function lim(st,v,hold){let sl=0,ro=0;for(let w=5;w<140;w++){const q=.5*RHO*w*w,F=q*st.cds*st.as,N=Math.max(0,st.m*G-q*(.25+.1*v.t)*v.L*v.W);
+if(!sl&&F>.7*N+hold)sl=w;if(!ro&&F*.55*v.H>N*v.W*.5)ro=w}return[sl||140,ro||140]}
+let car;function rebuild(){if(car)sc.remove(car);car=mk(S.sel,cfgOf(S.sel),true);sc.add(car)}
+// ---------- garage UI ----------
+const fc=$('#fr'),fx=fc.getContext('2d');fc.width=CO*PX;fc.height=RO*PX;
+function draw(){const v=V[S.sel],c=cfgOf(S.sel),[a,b]=v.cab.map(f=>f*v.L),X=x=>(x/CS+CO/2)*PX,Y=y=>(RO*CS-y)/CS*PX;
+fx.clearRect(0,0,fc.width,fc.height);fx.fillStyle='#35546a';fx.fillRect(X(-v.L/2),Y(1.03),v.L/CS*PX,.62/CS*PX);fx.fillStyle='#4a7188';fx.fillRect(X(a),Y(v.H),(b-a)/CS*PX,(v.H-1.03)/CS*PX);
+fx.fillStyle='#111';for(const x of[v.wb/2+.2,-v.wb/2-(v.t?.3:.2)]){fx.beginPath();fx.arc(X(x),Y(.42),.42/CS*PX,0,7);fx.fill()}
+fx.strokeStyle='#ffffff14';for(let i=0;i<=CO;i++){fx.beginPath();fx.moveTo(i*PX,0);fx.lineTo(i*PX,fc.height);fx.stroke()}for(let i=0;i<=RO;i++){fx.beginPath();fx.moveTo(0,i*PX);fx.lineTo(fc.width,i*PX);fx.stroke()}
+fx.fillStyle='#ff7a2fcc';c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number);fx.fillRect(x*PX+1,(RO-1-y)*PX+1,PX-2,PX-2)})}
+let pm=null;const cellAt=e=>{const r=fc.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*CO),RO-1-Math.floor((e.clientY-r.top)/r.height*RO)]};
+function paint(e){const[x,y]=cellAt(e);if(x<0||x>=CO||y<0||y>=RO)return;const c=cfgOf(S.sel),k=x+','+y,i=c.cells.indexOf(k);
+if(pm&&i<0){if(S.cr<15)return msg('Not enough credits: 15 per frame block');c.cells.push(k);S.cr-=15}else if(!pm&&i>=0){c.cells.splice(i,1);S.cr+=15}else return;draw();rebuild();ui()}
+fc.onpointerdown=e=>{fc.setPointerCapture(e.pointerId);const[x,y]=cellAt(e);pm=cfgOf(S.sel).cells.includes(x+','+y)?0:1;paint(e)};
+fc.onpointermove=e=>{if(pm!==null)paint(e)};fc.onpointerup=()=>pm=null;
+function pre(n){const v=V[S.sel],cf=cfgOf(S.sel),s=new Set(),X=x=>Math.floor(x/CS+CO/2),Y=y=>Math.floor(y/CS),a=X(v.cab[0]*v.L)-1,b=X(v.cab[1]*v.L)+1,r0=Y(1.03),r1=Y(v.H)+1,f=X(v.L/2),e=X(-v.L/2)-1,add=(c,r)=>c>=0&&c<CO&&r>=0&&r<RO&&s.add(c+','+r);
+if(n&1){for(let c=a;c<=b;c++)add(c,r1);for(let r=r0;r<=r1;r++){add(a,r);add(b,r)}}
+if(n>1)for(let j=0;j<4;j++)for(let r=0;r<4-j;r++)add(f+j,r);
+if(n==3)for(let r=0;r<4;r++)add(e,r);
+const d=(s.size-cf.cells.length)*15;if(d>S.cr)return msg('Not enough credits');S.cr-=d;cf.cells=[...s];draw();rebuild();ui()}
+function setO(key,n,arr){const c=cfgOf(S.sel),d=arr[n]-arr[c[key]];if(d>S.cr)return msg('Not enough credits');S.cr-=d;c[key]=n;rebuild();ui()}
+function buy(k){if(S.own[k])S.sel=k;else if(S.cr>=V[k].p){S.cr-=V[k].p;S.own[k]=1;S.sel=k}else return msg('Need '+V[k].p+' credits');draw();rebuild();ui()}
+function ui(){const c=cfgOf(S.sel),st=stats(S.sel,c),v=V[S.sel];$('#cr').innerHTML='Credits: <b style="color:var(--ok)">'+S.cr.toLocaleString()+'</b>';
+$('#veh').innerHTML=Object.keys(V).map(k=>`<button class="${k==S.sel?'on':''}" onclick="buy('${k}')">${V[k].n} ${S.own[k]?'':'('+V[k].p+')'}</button>`).join('');
+const row=(t,arr,key,f)=>`<div>${t}: `+arr.map((p,i)=>`<button class="${c[key]==i?'on':''}" onclick="setO('${key}',${i},${f})">${i?(key=='armor'?'L'+i:key=='spk'?(i*4)+' spikes':'Fit'):'None'}${i&&p!=arr[c[key]]?' '+(p-arr[c[key]]>0?'+':'')+(p-arr[c[key]]):''}</button>`).join('')+'</div>';
+$('#opt').innerHTML=row('Armor',ARM,'armor','ARM')+row('Hail guard',HG,'hg','HG')+row('Anchor spikes',SPK,'spk','SPK');
+const[sl,ro]=lim(st,v,0),[sh]=lim(st,v,st.hold),mp=x=>Math.round(x*2.237),R=(a,b)=>`<div class="st"><span>${a}</span><b>${b}</b></div>`;
+$('#stat').innerHTML=R('Curb weight → loaded',Math.round(v.m)+' → '+Math.round(st.m)+' kg')+R('Drag Cd (front / broadside)',st.cdf.toFixed(3)+' / '+st.cds.toFixed(2))+R('Frontal / side area',st.af.toFixed(1)+' / '+st.as.toFixed(1)+' m²')+
+R('Frame blocks',st.n+' ('+st.n*14+' kg)')+R('Debris shielding',Math.round((1-st.pm)*200)+'% of max')+R('Slides broadside at',mp(sl)+' mph')+(st.hold?R('With spikes anchored',mp(sh)+' mph'):'')+R('Rolls over at',mp(ro)+' mph');save()}
+window.ARM=ARM;window.HG=HG;window.SPK=SPK;
+// ---------- tornado ----------
+const fun=new THREE.Mesh(new THREE.CylinderGeometry(1,.3,1,24,1,true),new THREE.MeshBasicMaterial({color:0x7d8790,transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));
+const NP=2600,pa=new Float32Array(NP*3),pg=new Float32Array(NP),ph=new Float32Array(NP),pk=new Float32Array(NP);
+for(let i=0;i<NP;i++){pg[i]=Math.random()*6.28;ph[i]=Math.random();pk[i]=.6+Math.random()*.8}
+const pt=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(pa,3)),new THREE.PointsMaterial({color:0x5b554e,size:3.2,transparent:true,opacity:.85}));pt.frustumCulled=false;
+const HN=500,ha=new Float32Array(HN*3);for(let i=0;i<HN;i++){ha[i*3]=(Math.random()-.5)*70;ha[i*3+1]=Math.random()*40;ha[i*3+2]=(Math.random()-.5)*70}
+const hail=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(ha,3)),new THREE.PointsMaterial({color:0xffffff,size:.5,transparent:true}));hail.frustumCulled=false;
+fun.visible=pt.visible=hail.visible=false;sc.add(fun,pt,hail);
+let T=null,Mi={on:0};const keys={};
+const wind=(px,pz)=>{const dx=px-T.x,dz=pz-T.z,r=Math.hypot(dx,dz)+.01,vt=T.v*(r<T.R?r/T.R:Math.pow(T.R/r,.6)),vr=-.35*vt;
+return{x:-dz/r*vt+dx/r*vr+T.vx,z:dx/r*vt+dz/r*vr+T.vz,w:T.v*.55*Math.exp(-1.2*(r/T.R)**2),r}};
+function go(){const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<25?0:q<55?1:q<77?2:q<91?3:q<98?4:5,rg=[[29,38],[39,49],[50,60],[61,74],[75,89],[90,105]][e],
+an=Math.random()*6.28,d=380+Math.random()*120;
+T={x:Math.cos(an)*d,z:Math.sin(an)*d,R:50+Math.random()*90+e*8,v:rg[0]+Math.random()*(rg[1]-rg[0]),ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:6+Math.random()*8,hail:Math.random()<.6?Math.random():0};
+Mi={on:1,t:0,data:0,hp:100,st,k,car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:0,y:0,anch:0,torn:0}};
+sc.remove(car);car=mk(k,c,false);sc.add(car);fun.visible=pt.visible=true;hail.visible=T.hail>0;hail.material.opacity=.3+T.hail*.6;
+$('#pn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;msg('EF'+e+' tornado inbound. Intercept it!')}
+function sp(d){car.userData.sp.children.forEach(s=>s.position.y=d?.4:.95)}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;
+if(k==' '&&Mi.on){e.preventDefault();const c=Mi.car;if(!cfgOf(Mi.k).spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');
+if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.s=0;sp(1);msg('Spikes anchored')}else msg('Slow down to anchor')}});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
+function mission(dt){const c=Mi.car,st=Mi.st,v0=V[Mi.k],cf=cfgOf(Mi.k),arm=1/(1+.7*cf.armor);Mi.t+=dt;
+T.a+=(Math.random()-.5)*.25*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;
+fun.position.set(T.x,160,T.z);fun.scale.set(T.R*1.45,320,T.R*1.45);
+for(let i=0;i<NP;i++){const h=ph[i],r=T.R*(.35+1.1*Math.pow(h,1.6))*pk[i];pg[i]+=dt*T.v*.6/Math.max(r,15);pa[i*3]=T.x+Math.cos(pg[i])*r;pa[i*3+1]=h*320;pa[i*3+2]=T.z+Math.sin(pg[i])*r}pt.geometry.attributes.position.needsUpdate=true;
+if(!c.anch){const th=(keys.w?1:0)-(keys.s?1:0);c.s+=th*Math.min(7,26e4/(st.m*Math.max(Math.abs(c.s),4)))*dt;if(!th)c.s*=Math.exp(-.4*dt);c.s=cl(c.s,-10,34);c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/8)*Math.sign(c.s||1)*.9}
+const w=wind(c.x,c.z),fx=Math.cos(c.a),fz=-Math.sin(c.a),vx=fx*c.s+c.vx,vz=fz*c.s+c.vz,rx=w.x-vx,rz=w.z-vz,v=Math.hypot(rx,rz)+.001,al=Math.abs((rx*fx+rz*fz)/v),be=Math.sqrt(1-al*al),
+F=.5*RHO*(st.cdf*al+st.cds*be)*(st.af*al+st.as*be)*v*v,Fx=F*rx/v,Fz=F*rz/v,Ap=v0.L*v0.W,lift=.5*RHO*Ap*((.25+.1*v0.t)*v*v+.8*w.w*w.w),N=Math.max(0,st.m*G-lift),
+Fc=.7*N+(c.anch?st.hold:0),ws=Math.hypot(w.x,w.z);
+if(F>Fc){if(c.anch){c.anch=0;c.torn=1;sp(0);msg('Anchor spikes torn out!')}const ex=(F-.7*N)/st.m*dt*(c.anch?0:1);c.vx+=ex*rx/v;c.vz+=ex*rz/v}else{c.vx*=Math.exp(-2*dt);c.vz*=Math.exp(-2*dt)}
+const ro=F*.55*v0.H/(N*v0.W*.5+1),lofted=lift>st.m*G*.95;c.tilt=cl(ro-.6,0,1)*.9*Math.sign(-(Fx*fz-Fz*fx)||1);
+let dmg=0;if(ro>1.1)dmg+=25*dt;if(lofted){dmg+=35*dt;c.y+=12*dt}else c.y=Math.max(0,c.y-20*dt);
+if(ws>20&&Math.random()<.12*(ws/30)**2*dt)dmg+=(4+ws*.2)*arm*st.pm;
+if(T.hail&&w.r<3*T.R)dmg+=T.hail*4*(cf.hg?.07:1)*arm*dt;
+Mi.hp-=dmg;if(w.r<1.6*T.R)Mi.data+=(ws/10)**2*dt*1.5*(1+T.ef*.1);
+c.x+=(fx*c.s+c.vx)*dt;c.z+=(fz*c.s+c.vz)*dt;
+car.position.set(c.x,c.y,c.z);car.rotation.y=c.a;car.rotation.x=c.tilt||0;
+cam.position.set(c.x-fx*14,c.y+6,c.z-fz*14);cam.position.x+=(Math.random()-.5)*ws*.004;cam.lookAt(c.x+fx*12,c.y+2,c.z+fz*12);
+const ha_=hail.geometry.attributes.position;for(let i=0;i<HN;i++){ha[i*3+1]-=28*dt;if(ha[i*3+1]<0)ha[i*3+1]=40}hail.position.set(c.x,0,c.z);ha_.needsUpdate=true;
+const dx=T.x-c.x,dz=T.z-c.z;$('#ar').style.transform='rotate('+Math.atan2(-(dx*fz-dz*fx)*-1*-1,dx*fx+dz*fz)*57.3+'deg)';
+$('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(w.r)} m away<br>Wind ${Math.round(ws*2.237)} mph · You ${Math.round(Math.abs(c.s)*2.237)} mph${c.anch?' · <b style="color:var(--ac)">ANCHORED</b>':''}<div id="bar"><i style="width:${Math.max(0,Mi.hp)}%"></i></div>Data: <b>${Math.round(Mi.data)}</b> · Time left: ${Math.max(0,Math.ceil(110-Mi.t))}s${T.hail&&w.r<3*T.R?'<br>Hail: '+Math.round(T.hail*100)+'%'+(cf.hg?' (guarded)':' (exposed!)'):''}${lofted?'<br><b style="color:var(--bd)">LOFTED</b>':ro>1.1?'<br><b style="color:var(--bd)">ROLLING</b>':''}`;
+if(Mi.hp<=0||Mi.t>110)finish()}
+function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
+$('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
+function back(){$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
+function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
+let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;
+if(Mi.on)mission(dt);else{gt+=dt*.4;cam.position.set(Math.cos(gt)*10,3.8,Math.sin(gt)*10);cam.lookAt(0,1,0)}
+R.render(sc,cam)})(0);
+rebuild();draw();ui();
+</script></body></html>
+ 
