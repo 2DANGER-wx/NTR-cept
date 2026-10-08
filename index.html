@@ -31,7 +31,7 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 <h2>Armor, hail guard, anchor spikes</h2><div id="opt"></div>
 <h2>Physics readout</h2><div id="stat"></div>
 <button id="go" onclick="go()">INTERCEPT</button>
-<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer, Space drops or lifts anchor spikes. Stay inside the vortex to collect data.</p></div>
+<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer, Space drops or lifts anchor spikes. Stay inside the vortex to collect data. Press ` (backtick) to leave the field and bank the data you've collected.</p></div>
 <div id="res" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -146,7 +146,7 @@ Mi={on:1,t:0,data:0,hp:100,st,k,car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:
 sc.remove(car);car=mk(k,c,false);sc.add(car);fun.visible=pt.visible=true;hail.visible=T.hail>0;hail.material.opacity=.3+T.hail*.6;
 $('#pn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;msg('EF'+e+' tornado inbound. Intercept it!')}
 function sp(d){car.userData.sp.children.forEach(s=>s.position.y=d?.4:.95)}
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;
 if(k==' '&&Mi.on){e.preventDefault();const c=Mi.car;if(!cfgOf(Mi.k).spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');
 if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.s=0;sp(1);msg('Spikes anchored')}else msg('Slow down to anchor')}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
@@ -173,6 +173,7 @@ $('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(w.r)} m away<br>Wind
 if(Mi.hp<=0||Mi.t>110)finish()}
 function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
 $('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
+function leave(){const pay=Math.round(Mi.data);Mi.on=0;S.cr+=pay;save();back();msg('Left the field. Banked '+pay+' credits')}
 function back(){$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
 function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
 let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;
@@ -180,4 +181,3 @@ if(Mi.on)mission(dt);else{gt+=dt*.4;cam.position.set(Math.cos(gt)*10,3.8,Math.si
 R.render(sc,cam)})(0);
 rebuild();draw();ui();
 </script></body></html>
- 
