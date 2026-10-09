@@ -19,11 +19,30 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 #ar{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));margin-left:-18px;font-size:34px;color:var(--ac);text-shadow:0 0 6px #000}
 #msg{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#000b;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .3s;pointer-events:none}
 #res{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;text-align:center}#res div{background:var(--pn);padding:26px 36px;border:2px solid var(--ac);border-radius:8px}
+
+#mapToggle{position:fixed;right:12px;top:12px;z-index:12;background:#a63d29;border:1px solid #ffb18b;color:#fff;font-weight:800;letter-spacing:.5px;box-shadow:0 3px 14px #0008}
+#worldMapWrap{position:fixed;z-index:11;right:12px;top:50px;width:min(430px,calc(100vw - 24px));height:290px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;padding:7px;background:#09131eF2;border:1px solid #6d8998;border-radius:7px;box-shadow:0 8px 30px #0009;color:#e9f2f7}
+#mapHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;letter-spacing:.7px}
+#mapStatus{font-size:10px;color:#ffb07f;font-weight:700;white-space:nowrap}
+#worldMap{width:100%;height:218px;min-height:0;flex:1;display:block;border:1px solid #3a5262;border-radius:3px;background:#10202a}
+#mapLegend{font-size:10px;color:#a9c0cc;display:flex;gap:10px;flex-wrap:wrap}
+#worldMapWrap.expanded{left:14px;right:14px;top:58px;width:auto;height:calc(100vh - 72px);padding:10px}
+#worldMapWrap.expanded #worldMap{height:auto;flex:1}
+#probeReadout{margin-top:5px;font-size:11px;line-height:1.5;color:#c5e5ee;border-top:1px solid #38515d;padding-top:4px}
+#probeReadout .live{color:#83f6a7;font-weight:800}#probeReadout .waiting{color:#ffca83}
+@media(max-width:700px){#worldMapWrap{top:44px;right:6px;width:min(94vw,430px);height:245px}#worldMapWrap.expanded{left:6px;right:6px;top:45px;height:calc(100vh - 52px)}#mapToggle{top:6px;right:6px}#mapLegend{font-size:9px}}
+
 [hidden]{display:none!important}
 @media(max-width:700px){#pn{top:auto;height:56%;border-left:0;border-top:2px solid var(--ac)}}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud" hidden></div><div id="ar" hidden>▲</div><div id="msg"></div>
+<button id="mapToggle" hidden onclick="toggleMap()">WORLD MAP [M]</button>
+<div id="worldMapWrap" hidden>
+  <div id="mapHeader"><span>TACTICAL WORLD MAP · TOWNS & ROADS</span><span id="mapStatus">Awaiting intercept</span></div>
+  <canvas id="worldMap" width="900" height="620" aria-label="World map showing roads, towns, player, probes, and tornado"></canvas>
+  <div id="mapLegend"><span>● Tornado</span><span>▲ Interceptor</span><span>■ Probe</span><span>○ Town</span><span>━ Road</span></div>
+</div>
 <div id="pn"><h1>NTR-CEPT</h1><div id="cr"></div>
 <h2>Garage</h2><div id="veh"></div>
 <h2>Frame: draw it yourself (drag to add or erase, nose points right)</h2><canvas id="fr"></canvas>
@@ -33,7 +52,7 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 <h2>Frame color</h2><div><input id="frameColor" aria-label="Frame color" type="color" value="#e0701c" onchange="setFrameColor(this.value)"> <span style="color:var(--mu);font-size:12px">Customize your frame tubing</span></div>
 <h2>Physics readout</h2><div id="stat"></div>
 <button id="go" onclick="go()">INTERCEPT</button>
-<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer. Y deploys your airbags and any fitted spikes; Space toggles anchor spikes. Press E to exit/re-enter the car, click the world and move the mouse to look around, then use W/A/S/D to walk and F to deploy a purchased probe. Deeper tornado penetration earns more data. Press ` (backtick) to leave the field and bank your data.</p></div>
+<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer. Y toggles airbags and any fitted spikes on/off; Space toggles anchor spikes. Press M to expand the world map. Press E to exit/re-enter the car, click the world and move the mouse to look around, then use W/A/S/D to walk and F to deploy a purchased probe. Deeper tornado penetration earns more data. Press ` (backtick) to leave the field and bank your data.</p></div>
 <div id="res" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -52,19 +71,20 @@ const cfgOf=k=>{S.cfg[k]=Object.assign({cells:[],armor:0,hg:0,spk:0,airbags:0,pr
 const save=()=>{try{localStorage.setItem('ntrcept',JSON.stringify(S))}catch(e){}};
 function msg(t){const m=$('#msg');m.textContent=t;m.style.opacity=1;clearTimeout(msg.t);msg.t=setTimeout(()=>m.style.opacity=0,2200)}
 // ---------- three.js ----------
-const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true,powerPreference:'high-performance'});R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.08;
 const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.5,4000);
-sc.background=new THREE.Color(0x56626e);sc.fog=new THREE.Fog(0x56626e,200,1800);
-sc.add(new THREE.HemisphereLight(0xdde6ee,0x3a4a30,.95));const sun=new THREE.DirectionalLight(0xffffff,.7);sun.position.set(50,100,30);sc.add(sun);
+sc.background=new THREE.Color(0x718899);sc.fog=new THREE.Fog(0x718899,260,2050);
+sc.add(new THREE.HemisphereLight(0xe6f3ff,0x3a4a30,1.15));const sun=new THREE.DirectionalLight(0xfff4df,1.25);sun.position.set(500,900,300);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-2300;sun.shadow.camera.right=2300;sun.shadow.camera.top=2300;sun.shadow.camera.bottom=-2300;sun.shadow.camera.near=1;sun.shadow.camera.far=4200;sun.shadow.bias=-0.00045;sc.add(sun);
 {const q=document.createElement('canvas');q.width=q.height=256;const x=q.getContext('2d');for(let i=0;i<8;i++){x.fillStyle=i%2?'#4d6b3a':'#5a7d44';x.fillRect(0,i*32,256,32)}
 const tx=new THREE.CanvasTexture(q);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(300,300);
-const g=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),new THREE.MeshStandardMaterial({map:tx,roughness:1}));g.rotation.x=-Math.PI/2;sc.add(g);
-for(let i=0;i<90;i++){const a=Math.random()*6.28,d=40+Math.random()*1800,x=Math.cos(a)*d,z=Math.sin(a)*d;
-if(i<20){const h=new THREE.Mesh(new THREE.BoxGeometry(12,6,9),new THREE.MeshStandardMaterial({color:0xd8d2c4}));h.position.set(x,3,z);sc.add(h)}
-else{const t=new THREE.Mesh(new THREE.ConeGeometry(3,12,7),new THREE.MeshStandardMaterial({color:0x2f5a2c}));t.position.set(x,6,z);sc.add(t)}}}
-const U=new THREE.BoxGeometry(1,1,1),WG=new THREE.CylinderGeometry(.42,.42,.3,16),SG=new THREE.ConeGeometry(.09,.8,8),mats={};WG.rotateX(Math.PI/2);SG.rotateX(Math.PI);
+const g=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),new THREE.MeshStandardMaterial({map:tx,roughness:1}));g.rotation.x=-Math.PI/2;g.receiveShadow=true;sc.add(g);
+for(let i=0;i<115;i++){const a=Math.random()*6.28,d=80+Math.random()*1850,x=Math.cos(a)*d,z=Math.sin(a)*d;
+const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.45,.7,3.4,7),new THREE.MeshStandardMaterial({color:0x59412b,roughness:1}));trunk.position.set(x,1.7,z);sc.add(trunk);
+const t=new THREE.Mesh(new THREE.ConeGeometry(3.6+Math.random()*1.8,11+Math.random()*5,7),new THREE.MeshStandardMaterial({color:[0x2f5a2c,0x345f30,0x3b6837][i%3],roughness:1}));t.position.set(x,8,z);t.castShadow=true;sc.add(t)}}
+const U=new THREE.BoxGeometry(1,1,1),WG=new THREE.CylinderGeometry(.42,.42,.3,16),HUB=new THREE.CylinderGeometry(.19,.19,.32,12),SG=new THREE.ConeGeometry(.09,.8,8),mats={};WG.rotateX(Math.PI/2);HUB.rotateX(Math.PI/2);SG.rotateX(Math.PI);
 const M=(c,o={})=>mats[c+JSON.stringify(o)]||(mats[c+JSON.stringify(o)]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5,metalness:.3},o)));
-const B=(g,w,h,d,x,y,z,m)=>{const q=new THREE.Mesh(U,m);q.scale.set(w,h,d);q.position.set(x,y,z);g.add(q);return q};
+const B=(g,w,h,d,x,y,z,m)=>{const q=new THREE.Mesh(U,m);q.scale.set(w,h,d);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;g.add(q);return q};
 // A simple road grid makes the environment navigable and gives civilian traffic lanes.
 const roadGroup=new THREE.Group();sc.add(roadGroup);
 const asphalt=M(0x30343a,{roughness:.98,metalness:0}),roadWhite=M(0xd8d8cf,{roughness:.9,metalness:0}),roadYellow=M(0xe4bc45,{roughness:.9,metalness:0});
@@ -77,6 +97,46 @@ for(let p=-2000;p<=2000;p+=500){
   B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p-4.85,roadWhite);B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p+4.85,roadWhite);
   B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p-.12,roadYellow);B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p+.12,roadYellow);
 }
+// Named towns with individual houses, shops, warehouses and street signs. Buildings can collapse when tornadic winds pass.
+const TOWNS=[
+ {name:'PINE RIDGE',x:-1500,z:-1000},{name:'SILVER CREEK',x:-600,z:-300},
+ {name:'MASON FALLS',x:900,z:-1100},{name:'RED ROCK',x:-1300,z:600},
+ {name:'DRY CREEK',x:300,z:750},{name:'WILLOW BEND',x:1400,z:1300}
+];
+const buildings=[],debrisPieces=[];
+function addTownSign(town){
+ const cv=document.createElement('canvas');cv.width=512;cv.height=96;const cx=cv.getContext('2d');
+ cx.fillStyle='rgba(8,20,30,.88)';cx.fillRect(0,0,512,96);cx.strokeStyle='#d6e4eb';cx.lineWidth=5;cx.strokeRect(4,4,504,88);
+ cx.fillStyle='#fff';cx.font='bold 44px Verdana';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(town.name,256,48);
+ const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;
+ const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:true,depthWrite:false}));sign.position.set(town.x,27,town.z);sign.scale.set(115,21,1);sc.add(sign);
+}
+function addTownBuilding(town,idx,x,z){
+ const commercial=(idx%5===0||idx%7===0),w=commercial?19+Math.random()*9:11+Math.random()*7,d=commercial?17+Math.random()*8:10+Math.random()*7,h=commercial?8+Math.random()*10:4.5+Math.random()*4;
+ const walls=[0xd7c5a4,0xc5b59b,0xd8d8d0,0xb4c7ca,0xc98e69,0x8da3a7,0xd4cfb8],roofs=[0x554d48,0x7e4438,0x394650,0x675d4c,0x313a42];
+ const wallColor=walls[(idx+Math.floor(Math.random()*walls.length))%walls.length],roofColor=roofs[(idx+Math.floor(Math.random()*roofs.length))%roofs.length];
+ const wall=M(wallColor,{roughness:.87,metalness:.02}),roof=M(roofColor,{roughness:.88,metalness:.02}),glass=M(0x78a6b8,{roughness:.25,metalness:.12}),door=M(0x493528,{roughness:.8,metalness:0}),trim=M(0xe7dfcf,{roughness:.8,metalness:0});
+ const g=new THREE.Group();B(g,w,h,d,0,h/2,0,wall);
+ if(commercial){B(g,w+.7,.42,d+.7,0,h+.22,0,roof);B(g,w*.82,.12,.18,0,h*.76,d/2+.1,trim)}
+ else {
+  const r1=new THREE.Mesh(new THREE.BoxGeometry(w+.5,.28,d*.62),roof);r1.position.set(0,h+.66,-d*.2);r1.rotation.x=-.53;r1.castShadow=true;g.add(r1);
+  const r2=new THREE.Mesh(new THREE.BoxGeometry(w+.5,.28,d*.62),roof);r2.position.set(0,h+.66,d*.2);r2.rotation.x=.53;r2.castShadow=true;g.add(r2);
+  B(g,.65,1,.65,-w*.27,h+1.35,-d*.18,trim);
+ }
+ const winY=Math.max(1.7,h*.58),nx=commercial?[-w*.32,0,w*.32]:[-w*.25,w*.12];
+ for(const xx of nx){B(g,commercial?2.25:1.35,Math.min(1.55,h*.25),.065,xx,winY,d/2+.04,glass);B(g,.08,Math.min(1.65,h*.27),.08,xx,winY,d/2+.075,trim)}
+ if(!commercial){B(g,1.15,Math.min(2,h*.46),.08,w*.28,Math.min(h*.3,1.25),d/2+.055,door);B(g,.12,.12,.1,w*.28+.28,Math.min(h*.3,1.25),d/2+.11,trim)}
+ else {for(const xx of[-w*.25,w*.25])B(g,2.2,2.1,.075,xx,2.1,d/2+.05,glass)}
+ g.position.set(x,0,z);sc.add(g);
+ buildings.push({g,x,z,w,d,h,town:town.name,commercial,hp:commercial?2.4:1.5,damage:0,destroyed:false,wallColor,roofColor});
+}
+for(const town of TOWNS){
+ // Local town streets connect into the regional road grid.
+ B(roadGroup,7,.075,260,town.x,.065,town.z,asphalt);B(roadGroup,260,.075,7,town.x,.065,town.z,asphalt);
+ B(roadGroup,.13,.025,235,town.x,.11,town.z,roadYellow);B(roadGroup,235,.025,.13,town.x,.11,town.z,roadYellow);
+ let idx=0;for(const ox of[-108,-54,54,108])for(const oz of[-108,-54,54,108]){addTownBuilding(town,idx++,town.x+ox+(Math.random()-.5)*7,town.z+oz+(Math.random()-.5)*7)}
+ addTownSign(town);
+}
 // builds the vehicle exactly as configured: body, armor, hail guard, spikes, drawn frame
 function mk(k,c,dep){
 const v=V[k],g=new THREE.Group(),L=v.L,W=v.W,H=v.H,bd=M(v.c),gl=M(0x0a0e12,{metalness:.9,roughness:.1}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
@@ -84,9 +144,13 @@ const lx=v.t?a:-L/2;B(g,L/2-lx,.62,W,(lx+L/2)/2,.72,0,bd);
 B(g,cw,ch,W*.94,cx,1.03+ch/2,0,bd);B(g,cw*1.01,ch*.55,W*.97,cx,1.03+ch*.62,0,gl);
 if(v.t){B(g,a+L/2,.12,W,(a-L/2)/2,.82,0,bd);for(const s of[-1,1])B(g,a+L/2,.5,.1,(a-L/2)/2,1.06,s*(W/2-.05),bd);B(g,.1,.5,W,-L/2,1.06,0,bd)}
 B(g,.06,.3,W*.8,L/2,.85,0,M(0x111111));for(const s of[-1,1]){B(g,.08,.14,.4,L/2,.98,s*W*.36,M(0xfff6c8,{emissive:0xaaa070}));B(g,.08,.14,.3,-L/2,.98,s*W*.4,M(0xcc1111,{emissive:0x550000}))}
-for(const x of[wb=v.wb/2+.2,-v.wb/2+(v.t?-.3:-.2)])for(const s of[-1,1]){const w=new THREE.Mesh(WG,M(0x111111,{metalness:0,roughness:.9}));w.position.set(x,.42,s*(W/2-.15));g.add(w);
-if(v.d&&x<0){const w2=w.clone();w2.position.z=s*(W/2-.5);g.add(w2)}}
+for(const x of[wb=v.wb/2+.2,-v.wb/2+(v.t?-.3:-.2)])for(const s of[-1,1]){const w=new THREE.Mesh(WG,M(0x111111,{metalness:0,roughness:.9}));w.position.set(x,.42,s*(W/2-.15));g.add(w);const hub=new THREE.Mesh(HUB,M(0xb8c2c8,{metalness:.85,roughness:.25}));hub.position.copy(w.position);g.add(hub);
+if(v.d&&x<0){const w2=w.clone();w2.position.z=s*(W/2-.5);g.add(w2);const h2=hub.clone();h2.position.copy(w2.position);g.add(h2)}}
 var wb;
+// Distinct front/rear bumpers, grille, door handles and side mirrors improve vehicle readability.
+B(g,.14,.18,W*1.04,L/2+.07,.53,0,M(0x20262a,{metalness:.4}));B(g,.12,.16,W*1.03,-L/2-.06,.52,0,M(0x20262a,{metalness:.4}));
+for(let i=-2;i<=2;i++)B(g,.035,.17,.055,L/2+.1,.76,i*.12,M(0x8b999e,{metalness:.8,roughness:.25}));
+for(const side of[-1,1]){B(g,.2,.11,.13,b-.18,1.28,side*(W/2+.08),bd);B(g,.16,.12,.07,b-.18,1.29,side*(W/2+.15),gl);B(g,.5,.055,.045,.05,1.0,side*(W/2+.025),M(0x343e43,{metalness:.5}))}
 const n=c.armor;if(n){const st=M(new THREE.Color().setHSL(.58,.12,.55-n*.07).getHex(),{metalness:.7});
 B(g,L*.8,.5,W+.1,0,.75,0,st);
 if(n>1){B(g,.35,.5,W+.1,L/2,.7,0,st);B(g,.35,.5,W+.1,-L/2,.7,0,st);B(g,L/2-b,.08,W*.98,(b+L/2)/2,1.06,0,st)}
@@ -111,7 +175,9 @@ function makeCivilian(i){
   const g=new THREE.Group(),types=[{l:4.45,w:1.78,h:1.42},{l:4.9,w:1.9,h:1.8},{l:5.2,w:2.0,h:1.9}],v=types[Math.floor(Math.random()*types.length)];
   const colors=[0xd9d9d4,0x24569b,0x8b2224,0x292d31,0xe2d5b7,0x5a6870,0xffffff],body=M(colors[Math.floor(Math.random()*colors.length)],{roughness:.6,metalness:.18}),glass=M(0x1a242b,{roughness:.2,metalness:.25}),rubber=M(0x101214,{roughness:.95,metalness:0}),lamp=M(0xfff2c3,{emissive:0x665522});
   B(g,v.l,.46,v.w,0,.57,0,body);B(g,v.l*.48,.48,v.w*.82,-v.l*.06,.98,0,body);B(g,v.l*.43,.31,v.w*.84,-v.l*.06,1.04,0,glass);
-  B(g,.08,.15,v.w*.7,v.l/2,.63,0,lamp);
+  B(g,.1,.18,v.w*1.04,v.l/2+.035,.5,0,rubber);B(g,.1,.16,v.w*1.02,-v.l/2-.035,.5,0,rubber);
+  B(g,.055,.23,.54,v.l/2+.065,.59,0,glass);B(g,.07,.12,.12,v.l/2+.07,.63,-v.w*.31,lamp);B(g,.07,.12,.12,v.l/2+.07,.63,v.w*.31,lamp);
+  const tail=M(0xb71922,{emissive:0x330000});for(const side of[-1,1]){B(g,.06,.16,.12,-v.l/2-.02,.62,side*v.w*.32,tail);B(g,.24,.13,.11,-v.l*.12,1.0,side*(v.w*.52+.1),body)}
   const wheelGeo=new THREE.CylinderGeometry(.28,.28,.2,10);wheelGeo.rotateX(Math.PI/2);
   for(const x of[-v.l*.32,v.l*.32])for(const z of[-v.w*.52,v.w*.52]){const wheel=new THREE.Mesh(wheelGeo,rubber);wheel.position.set(x,.3,z);g.add(wheel)}
   const axis=Math.random()<.5?'x':'z',lane=(Math.floor(Math.random()*9)-4)*500+(Math.random()<.5?-2.3:2.3),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
@@ -193,24 +259,64 @@ fun.visible=pt.visible=hail.visible=false;sc.add(fun,pt,hail);
 let T=null,Mi={on:0};const keys={};
 const wind=(px,pz)=>{const dx=px-T.x,dz=pz-T.z,r=Math.hypot(dx,dz)+.01,vt=T.v*(r<T.R?r/T.R:Math.pow(T.R/r,.6)),vr=-.35*vt;
 return{x:-dz/r*vt+dx/r*vr+T.vx,z:dx/r*vt+dz/r*vr+T.vz,w:T.v*.55*Math.exp(-1.2*(r/T.R)**2),r}};
+const mapCanvas=$('#worldMap'),mapCtx=mapCanvas.getContext('2d');let mapExpanded=false;
+function toggleMap(){mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);$('#mapToggle').textContent=mapExpanded?'MINIMIZE MAP [M]':'WORLD MAP [M]';drawWorldMap()}
+function drawWorldMap(){
+ if(!Mi.on||$('#worldMapWrap').hidden)return;const r=mapCanvas.getBoundingClientRect();if(r.width<20||r.height<20)return;const dpr=Math.min(devicePixelRatio||1,2),ww=Math.max(1,Math.round(r.width*dpr)),hh=Math.max(1,Math.round(r.height*dpr));if(mapCanvas.width!==ww||mapCanvas.height!==hh){mapCanvas.width=ww;mapCanvas.height=hh}mapCtx.setTransform(dpr,0,0,dpr,0,0);const w=r.width,h=r.height,ctx=mapCtx;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle='#101d26';ctx.fillRect(0,0,w,h);const pad=18,mn=-2250,mx=2250,X=x=>pad+(x-mn)/(mx-mn)*(w-2*pad),Y=z=>h-pad-(z-mn)/(mx-mn)*(h-2*pad);
+ ctx.strokeStyle='#324653';ctx.lineWidth=1;for(let p=-2000;p<=2000;p+=500){ctx.beginPath();ctx.moveTo(X(p),Y(mn));ctx.lineTo(X(p),Y(mx));ctx.stroke();ctx.beginPath();ctx.moveTo(X(mn),Y(p));ctx.lineTo(X(mx),Y(p));ctx.stroke()}
+ ctx.strokeStyle='#58636b';ctx.lineWidth=2;for(let p=-2000;p<=2000;p+=500){ctx.beginPath();ctx.moveTo(X(p),Y(mn));ctx.lineTo(X(p),Y(mx));ctx.stroke();ctx.beginPath();ctx.moveTo(X(mn),Y(p));ctx.lineTo(X(mx),Y(p));ctx.stroke()}
+ // Mark the dense local street networks within each named town.
+ ctx.strokeStyle='#7b8c91';ctx.lineWidth=1;for(const town of TOWNS){ctx.beginPath();ctx.moveTo(X(town.x-130),Y(town.z));ctx.lineTo(X(town.x+130),Y(town.z));ctx.stroke();ctx.beginPath();ctx.moveTo(X(town.x),Y(town.z-130));ctx.lineTo(X(town.x),Y(town.z+130));ctx.stroke()}
+ // Recent tornado track.
+ if(T&&T.history&&T.history.length>1){ctx.beginPath();T.history.forEach((p,i)=>{i?ctx.lineTo(X(p.x),Y(p.z)):ctx.moveTo(X(p.x),Y(p.z))});ctx.strokeStyle='#ff7964';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([])}
+ for(const town of TOWNS){ctx.beginPath();ctx.arc(X(town.x),Y(town.z),4,0,Math.PI*2);ctx.fillStyle='#d8e8e7';ctx.fill();ctx.strokeStyle='#17232b';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#e5edf1';ctx.font=(mapExpanded?'12px':'9px')+' Verdana';ctx.fillText(town.name,X(town.x)+6,Y(town.z)-6)}
+ // Living and destroyed building marks make storm damage visible on the map.
+ for(const b of buildings){ctx.fillStyle=b.destroyed?'#9d493f':'#8fa5ae';ctx.fillRect(X(b.x)-1,Y(b.z)-1,2.5,2.5)}
+ if(T){const tx=X(T.x),ty=Y(T.z),scale=(w-2*pad)/(mx-mn),rad=Math.max(4,T.R*scale);ctx.beginPath();ctx.arc(tx,ty,rad,0,Math.PI*2);ctx.fillStyle='rgba(245,66,54,.16)';ctx.fill();ctx.strokeStyle='#ff594e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(tx,ty,Math.max(4,rad*.45),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(tx,ty,3.6,0,Math.PI*2);ctx.fillStyle='#ff4b43';ctx.fill();ctx.fillStyle='#ffb2a4';ctx.font='bold 10px Verdana';ctx.fillText('TORNADO',tx+7,ty-8)}
+ if(Mi.car){const px=Mi.exit&&Mi.player?Mi.player.x:Mi.car.x,pz=Mi.exit&&Mi.player?Mi.player.z:Mi.car.z;ctx.save();ctx.translate(X(px),Y(pz));ctx.rotate(Mi.exit&&Mi.player?-Mi.player.yaw:-Mi.car.a);ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(5,5);ctx.lineTo(-5,5);ctx.closePath();ctx.fillStyle='#77f4b3';ctx.fill();ctx.restore()}
+ for(const p of (Mi.probes||[])){ctx.fillStyle='#ffc14f';ctx.fillRect(X(p.x)-3,Y(p.z)-3,6,6)}
+ $('#mapStatus').textContent=T?('EF'+T.ef+' · '+Math.round(T.v*2.237)+' mph peak'):'Map ready';
+}
+function spawnBuildingDebris(b,ww){
+ const colors=[b.wallColor,b.roofColor,0x7b7770,0xb3a18b];
+ for(let i=0;i<7;i++){const ww0=.7+Math.random()*2.5,hh0=.35+Math.random()*1.8,dd0=.6+Math.random()*2.2,m=M(colors[i%colors.length],{roughness:.92,metalness:0}),piece=new THREE.Mesh(new THREE.BoxGeometry(ww0,hh0,dd0),m);piece.castShadow=true;piece.position.set(b.x+(Math.random()-.5)*b.w,b.h*Math.random()+.5,b.z+(Math.random()-.5)*b.d);sc.add(piece);debrisPieces.push({mesh:piece,vx:ww.x*.10+(Math.random()-.5)*8,vy:3+Math.random()*8,vz:ww.z*.10+(Math.random()-.5)*8,life:5+Math.random()*3,spin:(Math.random()-.5)*5})}
+}
+function updateBuildings(dt){
+ if(!Mi.on||!T)return;
+ for(const b of buildings){if(b.destroyed)continue;const bw=wind(b.x,b.z),mph=Math.hypot(bw.x,bw.z)*2.237;
+  if(bw.r<T.R*1.85&&mph>65){const inner=bw.r<T.R?1.5:.62;b.damage+=dt*Math.max(.12,(mph-52)/48)*inner}
+  const stress=cl(b.damage/b.hp,0,1);b.g.rotation.z=cl(bw.x*.0025,-.3,.3)*stress;b.g.rotation.x=cl(-bw.z*.0025,-.3,.3)*stress;
+  if(b.damage>=b.hp){b.destroyed=true;b.g.visible=false;spawnBuildingDebris(b,bw);if(Mi.t-(Mi.lastCollapseNotice||-10)>3){msg('Tornado damage in '+b.town+'! Buildings collapsing.');Mi.lastCollapseNotice=Mi.t}}
+ }
+}
+function updateDebris(dt){for(let i=debrisPieces.length-1;i>=0;i--){const d=debrisPieces[i];d.life-=dt;d.vy-=9.8*dt;d.mesh.position.x+=d.vx*dt;d.mesh.position.z+=d.vz*dt;d.mesh.position.y+=d.vy*dt;d.mesh.rotation.x+=d.spin*dt;d.mesh.rotation.z+=d.spin*.7*dt;if(d.mesh.position.y<.18){d.mesh.position.y=.18;d.vy=Math.max(0,-d.vy*.25);d.vx*=.78;d.vz*=.78}if(d.life<=0){sc.remove(d.mesh);d.mesh.geometry.dispose();debrisPieces.splice(i,1)}}}
 function go(){const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<25?0:q<55?1:q<77?2:q<91?3:q<98?4:5,rg=[[29,38],[39,49],[50,60],[61,74],[75,89],[90,105]][e],
 an=Math.random()*6.28,d=380+Math.random()*120;
-T={x:Math.cos(an)*d,z:Math.sin(an)*d,R:50+Math.random()*90+e*8,v:rg[0]+Math.random()*(rg[1]-rg[0]),ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:6+Math.random()*8,hail:Math.random()<.6?Math.random():0};
-Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,probesLeft:c.probes||0,probes:[],car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0,kitUsed:0}};
+T={x:Math.cos(an)*d,z:Math.sin(an)*d,R:50+Math.random()*90+e*8,v:rg[0]+Math.random()*(rg[1]-rg[0]),ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:6+Math.random()*8,hail:Math.random()<.6?Math.random():0,history:[],lastTrail:-10};
+Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,probesLeft:c.probes||0,probes:[],lastCollapseNotice:-10,car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0}};
 sc.remove(car);car=mk(k,c,false);sc.add(car);fun.visible=pt.visible=true;hail.visible=T.hail>0;hail.material.opacity=.3+T.hail*.6;
-$('#pn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;msg('EF'+e+' tornado inbound. Intercept it!')}
+$('#pn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#worldMapWrap').hidden=false;mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#mapToggle').textContent='WORLD MAP [M]';drawWorldMap();msg('EF'+e+' tornado inbound. Intercept it!')}
 function sp(d){car.userData.sp.children.forEach(s=>s.position.y=d?.4:.95)}
-function deployKit(){const cf=cfgOf(Mi.k),c=Mi.car;if(Mi.exit)return msg('Get back in the vehicle to deploy its equipment');if(c.kitUsed)return msg('Deployment kit already used this intercept');if(!cf.airbags&&!cf.spk)return msg('Buy airbags or anchor spikes first');c.kitUsed=1;if(cf.airbags){c.airDeploy=1;if(car.userData.airbags)car.userData.airbags.visible=true}if(cf.spk){c.spikeDeploy=1;sp(1);if(Math.abs(c.s)<4&&!c.torn){c.anch=1;c.s=0;msg(cf.airbags?'Airbags deployed; spikes anchored':'Spikes deployed and anchored')}else msg(cf.airbags?'Airbags deployed; slow down to anchor spikes':'Spikes deployed; slow down to anchor them')}else msg('Airbags deployed')}
+function deployKit(){
+ const cf=cfgOf(Mi.k),c=Mi.car;if(Mi.exit)return msg('Get back in the vehicle to deploy its equipment');
+ // Y is a true toggle: the second press retracts every item deployed by the first press.
+ if(c.airDeploy||c.spikeDeploy){c.airDeploy=0;c.spikeDeploy=0;c.anch=0;sp(0);if(car.userData.airbags)car.userData.airbags.visible=false;msg('Airbags and spikes retracted');return}
+ if(!cf.airbags&&!cf.spk)return msg('Buy airbags or anchor spikes first');
+ if(cf.airbags){c.airDeploy=1;if(car.userData.airbags)car.userData.airbags.visible=true}
+ if(cf.spk&&!c.torn){c.spikeDeploy=1;sp(1);if(Math.abs(c.s)<4){c.anch=1;c.s=0}}
+ msg(cf.airbags&&cf.spk?(c.torn?'Airbags deployed; spikes are damaged':'Airbags and spikes deployed'):(cf.airbags?'Airbags deployed':(c.torn?'Spikes are damaged':'Spikes deployed')));
+}
 function exitVehicle(){const c=Mi.car;if(!Mi.exit){Mi.exit=true;Mi.player={x:c.x+Math.sin(c.a)*(V[Mi.k].W/2+.9),z:c.z+Math.cos(c.a)*(V[Mi.k].W/2+.9),yaw:c.a};msg('On foot: click the world to look around; F deploys a probe')}else{const d=Math.hypot(Mi.player.x-c.x,Mi.player.z-c.z);if(d>7)return msg('Move closer to the vehicle to re-enter (E)');Mi.exit=false;if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();msg('Back in the driver seat')}}
 function deployProbe(){if(!Mi.exit)return msg('Press E to exit the car before deploying a probe');if(Mi.probesLeft<=0)return msg('No probes available. Buy one in the garage.');const p=Mi.player,mesh=makeProbe(p.x,p.z);Mi.probes.push({x:p.x,z:p.z,mesh});Mi.probesLeft--;msg('Probe deployed. It will send tornado data while in range.')}
 $('#c').addEventListener('click',()=>{if(Mi.on&&Mi.exit&&$('#c').requestPointerLock)$('#c').requestPointerLock()});
 document.addEventListener('mousemove',e=>{if(Mi.on&&Mi.exit&&document.pointerLockElement===$('#c')&&Mi.player)Mi.player.yaw-=e.movementX*.002});
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(!Mi.on)return;if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if(e.repeat&&['y','m','e','f'].includes(k))return;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(!Mi.on)return;if(k==='m'){e.preventDefault();toggleMap();return}if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
 if(k==' '){e.preventDefault();const c=Mi.car,cf=cfgOf(Mi.k);if(Mi.exit)return;if(!cf.spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.spikeDeploy=1;c.s=0;sp(1);msg('Spikes anchored')}else{c.spikeDeploy=1;sp(1);msg('Spikes down; slow to anchor')}}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
 function mission(dt){
  const c=Mi.car,st=Mi.st,v0=V[Mi.k],cf=cfgOf(Mi.k),arm=1/(1+.7*cf.armor)*(c.airDeploy?.58:1);Mi.t+=dt;
- T.a+=(Math.random()-.5)*.25*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;
+ T.a+=(Math.random()-.5)*.25*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;if(Mi.t-T.lastTrail>.35){T.history.push({x:T.x,z:T.z});if(T.history.length>320)T.history.shift();T.lastTrail=Mi.t}
  fun.position.set(T.x,160,T.z);fun.scale.set(T.R*1.45,320,T.R*1.45);
  for(let i=0;i<NP;i++){const h=ph[i],r=T.R*(.35+1.1*Math.pow(h,1.6))*pk[i];pg[i]+=dt*T.v*.6/Math.max(r,15);pa[i*3]=T.x+Math.cos(pg[i])*r;pa[i*3+1]=h*320;pa[i*3+2]=T.z+Math.sin(pg[i])*r}pt.geometry.attributes.position.needsUpdate=true;
  if(!Mi.exit&&!c.anch){const th=(keys.w?1:0)-(keys.s?1:0);c.s+=th*Math.min(7,26e4/(st.m*Math.max(Math.abs(c.s),4)))*dt;if(!th)c.s*=Math.exp(-.4*dt);c.s=cl(c.s,-10,34);c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/8)*Math.sign(c.s||1)*.9}
@@ -231,18 +337,19 @@ function mission(dt){
  if(dataW<1.6*T.R)Mi.data+=(ws/10)**2*dt*1.5*(1+T.ef*.1)*depthBoost;
  // Deployed probes report independently, so they can keep collecting readings while the player is away from the car.
  for(const probe of Mi.probes){const pw=wind(probe.x,probe.z),pws=Math.hypot(pw.x,pw.z);if(pw.r<1.8*T.R)Mi.data+=(pws/10)**2*dt*(1.1+T.ef*.16)*(pw.r<T.R?2.5:1)}
- updateTraffic(dt);
+ updateTraffic(dt);updateBuildings(dt);drawWorldMap();
+ const probeStatus=Mi.probes.length?Mi.probes.map((p,i)=>{const pw=wind(p.x,p.z),pmph=Math.round(Math.hypot(pw.x,pw.z)*2.237),near=pw.r<T.R*1.8;return `<div><b>Probe ${i+1}:</b> <span class="${near?'live':'waiting'}">${near?'TORNADO WINDS '+pmph+' mph':pmph+' mph local wind · signal '+Math.round(pw.r)+' m away'}</span></div>`}).join(''):'No probes deployed';
  const haDist=windRange,windMph=Math.round(ws*2.237),dx=T.x-(Mi.exit&&Mi.player?Mi.player.x:c.x),dz=T.z-(Mi.exit&&Mi.player?Mi.player.z:c.z),fxNow=Mi.exit&&Mi.player?Math.cos(Mi.player.yaw):fx,fzNow=Mi.exit&&Mi.player?-Math.sin(Mi.player.yaw):fz;
  $('#ar').style.transform='rotate('+Math.atan2(-(dx*fzNow-dz*fxNow)*-1*-1,dx*fxNow+dz*fzNow)*57.3+'deg)';
- $('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(dataW)} m away<br>Wind ${windMph} mph · ${Mi.exit?'ON FOOT':'You '+Math.round(Math.abs(c.s)*2.237)+' mph'}${c.anch?' · <b style="color:var(--ac)">ANCHORED</b>':''}${c.airDeploy?' · <b style="color:#ffb34f">AIRBAGS DEPLOYED</b>':''}<div id="bar"><i style="width:${Math.max(0,Mi.hp)}%"></i></div>Data: <b>${Math.round(Mi.data)}</b> · Probes left: ${Mi.probesLeft}<br>Traffic rollovers: ${Mi.rollovers} · Time left: ${Math.max(0,Math.ceil(110-Mi.t))}s${T.hail&&dataW<3*T.R?'<br>Hail: '+Math.round(T.hail*100)+'%'+(cf.hg?' (guarded)':' (exposed!)'):''}${Mi.exit?'<br><b>WASD walk · Mouse look · F probe · E re-enter</b>':''}${lofted?'<br><b style="color:var(--bd)">LOFTED</b>':ro>1.1?'<br><b style="color:var(--bd)">ROLLING</b>':''}`;
+ $('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(dataW)} m away<br>Wind ${windMph} mph · ${Mi.exit?'ON FOOT':'You '+Math.round(Math.abs(c.s)*2.237)+' mph'}${c.anch?' · <b style="color:var(--ac)">ANCHORED</b>':''}${c.airDeploy?' · <b style="color:#ffb34f">AIRBAGS DEPLOYED</b>':''}<div id="bar"><i style="width:${Math.max(0,Mi.hp)}%"></i></div>Data: <b>${Math.round(Mi.data)}</b> · Probes left: ${Mi.probesLeft}<br>Buildings destroyed: ${buildings.filter(b=>b.destroyed).length} · Traffic rollovers: ${Mi.rollovers}<br>Time left: ${Math.max(0,Math.ceil(110-Mi.t))}s${T.hail&&dataW<3*T.R?'<br>Hail: '+Math.round(T.hail*100)+'%'+(cf.hg?' (guarded)':' (exposed!)'):''}<div id="probeReadout"><b>PROBE TELEMETRY</b><br>${probeStatus}</div>${Mi.exit?'<br><b>WASD walk · Mouse look · F probe · E re-enter</b>':''}${lofted?'<br><b style="color:var(--bd)">LOFTED</b>':ro>1.1?'<br><b style="color:var(--bd)">ROLLING</b>':''}`;
  if(Mi.hp<=0||Mi.t>110)finish()
 }
 function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;cfgOf(Mi.k).probes=Mi.probesLeft;if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
-$('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
+$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
 function leave(){const pay=Math.round(Mi.data);Mi.on=0;S.cr+=pay;save();back();msg('Left the field. Banked '+pay+' credits')}
-function back(){if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft;save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
-function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
-let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;
+function back(){if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft;save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
+function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(Mi.on)drawWorldMap()}addEventListener('resize',size);size();
+let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;updateDebris(dt);
 if(Mi.on)mission(dt);else{updateTraffic(dt);gt+=dt*.4;cam.position.set(Math.cos(gt)*10,3.8,Math.sin(gt)*10);cam.lookAt(0,1,0)}
 R.render(sc,cam)})(0);
 rebuild();draw();ui();
