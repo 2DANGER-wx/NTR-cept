@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>NTR-CEPT</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>NTR-CEPT — Free Camera, Solid Block Gizmos & Fuel Fix</title>
 <style>
 :root{--bg:#14232b;--pn:#1a2c36f2;--tx:#e9eef1;--mu:#93a9b5;--ac:#ff7a2f;--ok:#58d68d;--bd:#ff5a5a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14232b}}
@@ -150,17 +150,18 @@ body.ui-hidden .ui-layer{display:none!important}
 <label for="frameWidth">Width of selected cube: <span id="frameWidthValue">0.45 m</span></label><input id="frameWidth" type="range" min="0.45" max="4.5" step="0.05" value="0.45" oninput="resizeFrame('frameWidth',this.value)">
 <label for="frameHeight">Height of selected cube: <span id="frameHeightValue">0.45 m</span></label><input id="frameHeight" type="range" min="0.45" max="4.5" step="0.05" value="0.45" oninput="resizeFrame('frameHeight',this.value)">
 <label for="frameRotate">Rotate selected cube: <span id="frameRotateValue">0°</span></label><input id="frameRotate" type="range" min="-180" max="180" step="5" value="0" oninput="rotateFrame(this.value)">
-<div class="subnote">The starter is a tiny 0.45 m cube. Stretch its length, width and height individually; larger volume costs more credits. Buy extra tiny cubes to connect additional sections. Armor is fitted separately below.</div></div>
+<label for="frameRoundness">Smooth cube corners: <span id="frameRoundnessValue">0%</span></label><input id="frameRoundness" type="range" min="0" max="45" step="1" value="0" oninput="roundFrame(this.value)">
+<div class="subnote">The starter is one small, solid 0.45 m block on the vehicle. Double-click a solid block to select it. Drag the red/green/blue face dots to stretch that axis, drag a yellow corner dot to expand all dimensions, and drag the pink ring to rotate. All manipulators stay attached to the selected block. Scroll to zoom; drag empty space to orbit; right-drag to pan. Expanding the block costs credits according to its volume. Extra solid blocks can be bought and connected.</div></div>
 <canvas id="fr" hidden></canvas><div hidden><button onclick="pre(1)">Roll cage</button><button onclick="pre(2)">Plow wedge</button><button onclick="pre(3)">Fortress</button><button onclick="pre(0)">Clear</button></div>
 <h2>Armor, hail guard, anchor spikes</h2><div id="opt"></div>
-<h2>Equipment shop</h2><div id="shop"></div>
+<h2>Equipment shop</h2><div id="shop"></div><button onclick="resetFuelToHalfTank()">RESET FUEL TO 50%</button>
 <h2>Frame color</h2><div><input id="frameColor" aria-label="Frame color" type="color" value="#e0701c" onchange="setFrameColor(this.value)"> <span style="color:var(--mu);font-size:12px">Customize your frame tubing</span></div>
 <h2>Custom wrap / livery</h2><div id="wrapControls"><label for="wrapColor">Body paint</label><input id="wrapColor" type="color" value="#34465e" onchange="setWrapColor(this.value)"><label for="wrapText">Side lettering</label><input id="wrapText" maxlength="28" placeholder="YOUR TEAM / CALLSIGN" oninput="setWrapText(this.value)"><label for="wrapImage">Upload wrap image</label><input id="wrapImage" type="file" accept="image/*" onchange="loadWrapImage(this)"><button onclick="clearWrapImage()">Clear wrap image</button></div>
 <h2>Strip to chassis</h2><button onclick="toggleChassis()" id="stripButton">Strip body panels</button><p class="subnote">Removes the body shell to show the rolling chassis, wheels, frame and equipment. Toggle again to restore it.</p>
 <h2>Windshield shop</h2><div id="windshieldShop"></div><p class="subnote">Stock glass breaks after a few hail hits. Reinforced and storm-rated glass lasts longer. In-car first-person view shows cracks.</p>
 <h2>Physics readout</h2><div id="stat"></div>
 <button id="go" onclick="go()">INTERCEPT</button>
-<p style="color:var(--mu);font-size:12px">Town driving: W/S throttle, A/D steer, V first-person dash camera, drag the world to orbit the camera, scroll to zoom, G garage editor, M world map, R refuel. Intercept: the camera initially tracks the storm; drag to orbit, scroll to zoom, or press C to center on the tornado again. Y deploy/retract equipment, Space anchors spikes, E exit/re-enter, F deploy a probe. Press ` (backtick) to end the intercept.</p><button onclick="toggleGarage()">CLOSE GARAGE / DRIVE [G]</button></div>
+<p style="color:var(--mu);font-size:12px">Town driving: W/S throttle, A/D steer, V first-person dash camera, left-drag empty space to orbit the free camera, right-drag to move the camera focus anywhere, scroll to zoom, G garage editor, M world map, R refuel. Intercept: drag to look anywhere, right-drag to pan the camera focus across the world, scroll to zoom. The camera does not auto-lock to the tornado. Y deploy/retract equipment, Space anchors spikes, E exit/re-enter, F deploy a probe. Press ` (backtick) to end the intercept.</p><button onclick="toggleGarage()">CLOSE GARAGE / DRIVE [G]</button></div>
 <div id="res" class="ui-layer" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -174,28 +175,34 @@ f150:{n:'Ford F-150',p:12000,m:2270,cd:.40,L:5.9,W:2.0,H:1.95,wb:3.68,c:0x1c55a8
 f350:{n:'Ford F-350 Dually',p:20000,m:3200,cd:.45,L:6.7,W:2.4,H:2.05,wb:4.1,c:0xb3261e,cab:[-.1,.3],t:1,d:1},
  support:{n:'Support Service Van',p:14000,m:2800,cd:.40,L:5.6,W:2.1,H:2.15,wb:3.5,c:0xe0dfd4,cab:[-.32,.10],t:0},
  radartruck:{n:'Radar Support Truck',p:22000,m:3500,cd:.48,L:6.3,W:2.4,H:2.3,wb:4.0,c:0x1b6f5b,cab:[-.13,.23],t:1,d:1}};
-const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900];
-let S={cr:3000,fuel:100,own:{tahoe:1},sel:'tahoe',cfg:{}};
-try{const j=localStorage.getItem('ntrcept');if(j)S=Object.assign(S,JSON.parse(j))}catch(e){}
-S.own=Object.assign({tahoe:1},S.own||{});S.cfg=S.cfg||{};S.fuel=50; // Fuel intentionally resets to 50% each page load/refresh.
+const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900],START_FUEL=50;
+const SAVE_KEY='ntrcept_solidblocks_freecam_v3';
+let S={cr:3000,fuel:START_FUEL,own:{tahoe:1},sel:'tahoe',cfg:{}};
+try{const j=localStorage.getItem(SAVE_KEY)||localStorage.getItem('ntrcept');if(j)S=Object.assign(S,JSON.parse(j))}catch(e){}
+S.own=Object.assign({tahoe:1},S.own||{});S.cfg=S.cfg||{};
+// Each page load deliberately initializes a half tank, regardless of old/local saves.
+S.fuel=START_FUEL;
 const cfgOf=k=>{
   S.cfg[k]=Object.assign({cells:[],armor:0,hg:0,spk:0,airbags:0,probes:0,frameColor:'#e0701c',frameSize:0,frameEnabled:true,frameCubes:null,frameSelected:0,frameLength:1,frameWidth:1,frameHeight:1,frameRotation:0,wrapColor:'',wrapText:'',wrapImageData:'',windshieldTier:0,windshieldHits:0,windshieldBroken:false,chassisOnly:false},S.cfg[k]||{});
   const c=S.cfg[k],v=V[k];
   // Migrate older saves into one ordinary starter cube instead of a pre-expanded vehicle-length cage.
   if(!Array.isArray(c.frameCubes)||!c.frameCubes.length){
-    c.frameCubes=[{x:0,y:1.15,z:0,l:.45,w:.45,h:.45,rotation:0}];
+    c.frameCubes=[{x:0,y:(V[k]?.H||1.9)+.22,z:0,l:.45,w:.45,h:.45,rotation:0,roundness:0}];
     c.frameSelected=0;
   }
   // Older releases made every default module 1.5 m. If all saved modules still have that untouched default size, shrink them and preserve their attached layout.
   if(c.frameCubes.length&&c.frameCubes.every(p=>Math.abs((Number(p.l)||1.5)-1.5)<.001&&Math.abs((Number(p.w)||1.5)-1.5)<.001&&Math.abs((Number(p.h)||1.5)-1.5)<.001)){
     const root=c.frameCubes[0],ox=Number(root.x)||0,oz=Number(root.z)||0,oy=Number.isFinite(Number(root.y))?Number(root.y):v.H*.9;
-    c.frameCubes.forEach(p=>{const px=Number(p.x)||0,pz=Number(p.z)||0,py=Number.isFinite(Number(p.y))?Number(p.y):oy;p.x=(px-ox)*.3;p.z=(pz-oz)*.3;p.y=1.15+(py-oy)*.3;p.l=p.w=p.h=.45;p.rotation=Number(p.rotation)||0});
+    c.frameCubes.forEach(p=>{const px=Number(p.x)||0,pz=Number(p.z)||0,py=Number.isFinite(Number(p.y))?Number(p.y):oy;p.x=(px-ox)*.3;p.z=(pz-oz)*.3;p.y=(V[k]?.H||1.9)+.22+(py-oy)*.3;p.l=p.w=p.h=.45;p.rotation=Number(p.rotation)||0;p.roundness=Number(p.roundness)||0});
   }
+  c.frameCubes.forEach(p=>{if(!Number.isFinite(Number(p.roundness)))p.roundness=0});
+  if(c.frameCubes.length===1&&Math.abs((Number(c.frameCubes[0].l)||.45)-.45)<.001&&Math.abs((Number(c.frameCubes[0].y)||0)-1.15)<.01)c.frameCubes[0].y=(v.H||1.9)+.22;
   c.frameSelected=cl(Number(c.frameSelected)||0,0,c.frameCubes.length-1);
   return c;
 };
-const save=()=>{try{localStorage.setItem('ntrcept',JSON.stringify(S))}catch(e){}};
-save(); // Persist this page-load's 50% starting fuel immediately.
+const save=()=>{try{const raw=JSON.stringify(S);localStorage.setItem(SAVE_KEY,raw);localStorage.setItem('ntrcept',raw)}catch(e){}};
+save(); // Persist the 50% starting fuel immediately under a fresh save version.
+function resetFuelToHalfTank(){S.fuel=START_FUEL;save();ui();$('#freeHud').innerHTML='Fuel reset to 50%';msg('Fuel reset to 50%');}
 function msg(t){const m=$('#msg');m.textContent=t;m.style.opacity=1;clearTimeout(msg.t);msg.t=setTimeout(()=>m.style.opacity=0,2200)}
 // ---------- three.js ----------
 const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true,powerPreference:'high-performance'});R.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -219,6 +226,20 @@ const t=new THREE.Mesh(new THREE.ConeGeometry(3.6+Math.random()*1.8,11+Math.rand
 const U=new THREE.BoxGeometry(1,1,1),WG=new THREE.CylinderGeometry(.42,.42,.3,16),HUB=new THREE.CylinderGeometry(.19,.19,.32,12),SG=new THREE.ConeGeometry(.09,.8,8),mats={};WG.rotateX(Math.PI/2);HUB.rotateX(Math.PI/2);SG.rotateX(Math.PI);
 const M=(c,o={})=>mats[c+JSON.stringify(o)]||(mats[c+JSON.stringify(o)]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5,metalness:.3},o)));
 const B=(g,w,h,d,x,y,z,m)=>{const q=new THREE.Mesh(U,m);q.scale.set(w,h,d);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;g.add(q);return q};
+// Subdivided solid box with a controllable rounded edge radius (percentage of its shortest dimension).
+function makeSolidBlockGeometry(length,height,width,roundPercent){
+ const pct=cl(Number(roundPercent)||0,0,45),minDim=Math.min(length,height,width),radius=minDim*pct/100;
+ if(radius<.002)return new THREE.BoxGeometry(length,height,width);
+ const seg=8,geo=new THREE.BoxGeometry(length,height,width,seg,seg,seg),pos=geo.attributes.position,norm=geo.attributes.normal;
+ const hx=length/2,hy=height/2,hz=width/2;
+ for(let i=0;i<pos.count;i++){
+  const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+  const cx=cl(x,-hx+radius,hx-radius),cy=cl(y,-hy+radius,hy-radius),cz=cl(z,-hz+radius,hz-radius);
+  let dx=x-cx,dy=y-cy,dz=z-cz,len=Math.hypot(dx,dy,dz);
+  if(len>1e-8){dx/=len;dy/=len;dz/=len;pos.setXYZ(i,cx+dx*radius,cy+dy*radius,cz+dz*radius);norm.setXYZ(i,dx,dy,dz)}
+ }
+ pos.needsUpdate=true;norm.needsUpdate=true;geo.computeBoundingSphere();return geo;
+}
 // A simple road grid makes the environment navigable and gives civilian traffic lanes.
 const roadGroup=new THREE.Group();sc.add(roadGroup);
 const asphalt=M(0x292d30,{roughness:1,metalness:0}),roadWhite=M(0xd6d8ce,{roughness:.95,metalness:0}),roadYellow=M(0xd5a92e,{roughness:.95,metalness:0}),roadShoulder=M(0x59574f,{roughness:1,metalness:0});
@@ -286,6 +307,41 @@ function makeGasStation(i,town){const x=town.x+(i%2?180:-180),z=town.z+(i%2?-90:
  B(g,18,.15,12,0,.12,0,dark);for(const zz of[-4,0,4]){B(g,1.2,2.5,1.05,zz*1.2,1.4,0,pump);B(g,.72,.7,.1,zz*1.2,2.1,.57,dark);const hose=new THREE.Mesh(new THREE.TorusGeometry(.32,.045,6,12,Math.PI*1.3),dark);hose.position.set(zz*1.2+.5,1.55,.58);hose.rotation.z=Math.PI/2;g.add(hose);B(g,.12,.9,.1,zz*1.2+.7,1.2,.65,dark)}
  g.position.set(x,0,z);sc.add(g);gasStations.push({x,z,g,name:town.name+' Fuel Stop'});}
 TOWNS.forEach((town,i)=>{if(i!==3)makeGasStation(i,town)});
+// Roblox-Studio-style frame editor gizmo. Face dots resize one axis, corner dots scale all axes,
+// and the circular ring rotates the selected solid block. All handles are attached to the block.
+function updateFrameGizmoVisual(root,part){
+ if(!root||!part)return;
+ const Lf=cl(Number(part.l)||.45,.45,7),Wf=cl(Number(part.w)||.45,.45,4.5),Hf=cl(Number(part.h)||.45,.45,4.5);
+ root.position.set(Number(part.x)||0,Number.isFinite(Number(part.y))?Number(part.y):1.5,Number(part.z)||0);
+ root.rotation.y=(Number(part.rotation)||0)*Math.PI/180;
+ for(const o of root.children){const u=o.userData||{};
+  if(u.gizmoAction==='resize'){
+   if(u.axis==='x')o.position.set(u.dir*(Lf/2+.13),0,0);
+   else if(u.axis==='y')o.position.set(0,u.dir*(Hf/2+.13),0);
+   else o.position.set(0,0,u.dir*(Wf/2+.13));
+  }else if(u.gizmoAction==='corner'){
+   const a=u.corner;o.position.set(a[0]*(Lf/2+.035),a[1]*(Hf/2+.035),a[2]*(Wf/2+.035));
+  }else if(u.gizmoAction==='rod'){
+   let a,b;if(u.axis==='x'){a=new THREE.Vector3(u.dir*Lf/2,0,0);b=new THREE.Vector3(u.dir*(Lf/2+.13),0,0)}
+   else if(u.axis==='y'){a=new THREE.Vector3(0,u.dir*Hf/2,0);b=new THREE.Vector3(0,u.dir*(Hf/2+.13),0)}
+   else{a=new THREE.Vector3(0,0,u.dir*Wf/2);b=new THREE.Vector3(0,0,u.dir*(Wf/2+.13))}
+   const attr=o.geometry.getAttribute('position');attr.setXYZ(0,a.x,a.y,a.z);attr.setXYZ(1,b.x,b.y,b.z);attr.needsUpdate=true;o.geometry.computeBoundingSphere();
+  }else if(u.gizmoAction==='rotate'){
+   o.scale.setScalar(Math.max(Lf,Wf,Hf)*.9+.1);
+  }
+ }
+}
+function buildFrameGizmo(g,c,idx){
+ const root=new THREE.Group();root.name='SelectedBlockGizmo';root.userData.isFrameGizmo=true;
+ const colors={x:0xff5b57,y:0x61ff91,z:0x54baff,corner:0xffdf74,rotate:0xff78e1};
+ const mat=(color)=>new THREE.MeshBasicMaterial({color,depthTest:false,transparent:false,toneMapped:false});
+ const addRod=(axis,dir,color)=>{const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(1,0,0)]),line=new THREE.Line(geo,new THREE.LineBasicMaterial({color,depthTest:false,transparent:true,opacity:.95,toneMapped:false}));line.userData={gizmoAction:'rod',axis,dir};line.renderOrder=998;root.add(line)};
+ const addHandle=(action,axis,dir,color,r=.075,corner=null)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),mat(color));mesh.userData={gizmoHandle:true,gizmoAction:action,axis,dir,corner};mesh.renderOrder=1000;root.add(mesh);return mesh};
+ for(const axis of ['x','y','z'])for(const dir of [-1,1]){addRod(axis,dir,colors[axis]);addHandle('resize',axis,dir,colors[axis],.075)}
+ for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])addHandle('corner',null,0,colors.corner,.057,[x,y,z]);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.032,8,64),mat(colors.rotate));ring.rotation.x=Math.PI/2;ring.userData={gizmoHandle:true,gizmoAction:'rotate',axis:'y',dir:1};ring.renderOrder=999;root.add(ring);
+ g.add(root);g.userData.frameGizmo=root;updateFrameGizmoVisual(root,c.frameCubes[idx]);return root;
+}
 // builds each selected dealer vehicle from its dimensions, configuration and styling.
 function mk(k,c,dep){
 const v=V[k],g=new THREE.Group(),L=v.L,W=v.W,H=v.H,cfg=c,bd=M(c.wrapColor?parseInt(c.wrapColor.slice(1),16):v.c),gl=M(0x101c23,{metalness:.25,roughness:.22}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
@@ -306,18 +362,21 @@ const windshield=B(shell,.055,ch*.52,W*.72,b+.03,1.03+ch*.56,0,glassMat);g.userD
 const crackGroup=new THREE.Group(),crackMat=new THREE.LineBasicMaterial({color:0xd9edf0,transparent:true,opacity:.9});
 for(let i=0;i<8;i++){const zz=(Math.random()-.5)*W*.68,yy=1.03+ch*.45+(Math.random()-.5)*ch*.25,pts=[new THREE.Vector3(b+.063,yy,zz),new THREE.Vector3(b+.063,yy-.16,zz+.09),new THREE.Vector3(b+.063,yy-.08,zz+.19),new THREE.Vector3(b+.063,yy-.25,zz+.27)];const geom=new THREE.BufferGeometry().setFromPoints(pts);crackGroup.add(new THREE.Line(geom,crackMat))}
 crackGroup.visible=false;shell.add(crackGroup);g.userData.cracks=crackGroup;g.userData.shell=shell;
-// Modular frame builder: every cube is a separate wireframe module that can be stretched, rotated and connected to another cube.
+// Modular frame builder: each module is a filled, solid block. The selected block gets a clear outline.
 if(c.frameEnabled!==false&&Array.isArray(c.frameCubes)&&c.frameCubes.length){
- const frameRoot=new THREE.Group(),bar=.075,baseColor=parseInt((c.frameColor||'#e0701c').slice(1),16),selIndex=cl(c.frameSelected||0,0,c.frameCubes.length-1);
+ const frameRoot=new THREE.Group(),baseColor=parseInt((c.frameColor||'#e0701c').slice(1),16),selIndex=cl(c.frameSelected||0,0,c.frameCubes.length-1);
  c.frameCubes.forEach((part,index)=>{
-   const cube=new THREE.Group(),Lf=cl(Number(part.l)||1.5,.7,7),Wf=cl(Number(part.w)||1.5,.7,4.5),Hf=cl(Number(part.h)||1.5,.7,4.5),chosen=index===selIndex;
-   const fm=M(baseColor,{metalness:.68,roughness:.36,emissive:chosen?baseColor:0x000000,emissiveIntensity:chosen ? 0.13 : 0});
-   const xs=[-Lf/2,Lf/2],zs=[-Wf/2,Wf/2],ys=[-Hf/2,Hf/2];
-   for(const xx of xs)for(const zz of zs)B(cube,bar,Hf,bar,xx,0,zz,fm);
-   for(const yy of ys){for(const zz of zs)B(cube,Lf,bar,bar,0,yy,zz,fm);for(const xx of xs)B(cube,bar,bar,Wf,xx,yy,0,fm)}
-   cube.position.set(Number(part.x)||0,Number.isFinite(Number(part.y))?Number(part.y):1.5,Number(part.z)||0);cube.rotation.y=(Number(part.rotation)||0)*Math.PI/180;frameRoot.add(cube);
+   const cube=new THREE.Group(),Lf=cl(Number(part.l)||.45,.45,7),Wf=cl(Number(part.w)||.45,.45,4.5),Hf=cl(Number(part.h)||.45,.45,4.5),chosen=index===selIndex;
+   cube.userData.frameCubeIndex=index;
+   const fm=M(baseColor,{metalness:.28,roughness:.48,emissive:chosen?baseColor:0x000000,emissiveIntensity:chosen?.055:0});
+   const solid=new THREE.Mesh(makeSolidBlockGeometry(Lf,Hf,Wf,(Number(part.roundness)||0)*100),fm);solid.castShadow=true;solid.receiveShadow=true;solid.userData.frameCubeIndex=index;cube.add(solid);
+   // Thin 12-edge outline only on the selected solid block; double-click in the scene selects a block.
+   const edgeGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(Lf+.018,Hf+.018,Wf+.018));
+   const edgeMat=new THREE.LineBasicMaterial({color:chosen?0xffffff:0x18232a,transparent:true,opacity:chosen?.98:.2,depthTest:true});
+   const outline=new THREE.LineSegments(edgeGeo,edgeMat);outline.userData.frameCubeIndex=index;cube.add(outline);
+   cube.position.set(Number(part.x)||0,Number.isFinite(Number(part.y))?Number(part.y):((v.H||1.9)+.22),Number(part.z)||0);cube.rotation.y=(Number(part.rotation)||0)*Math.PI/180;frameRoot.add(cube);
  });
- g.add(frameRoot);g.userData.cubeFrame=frameRoot;
+ g.add(frameRoot);g.userData.cubeFrame=frameRoot;if(dep)buildFrameGizmo(g,c,selIndex);
 }
 // Optional team lettering and a user-supplied image are rendered as side livery decals.
 if(c.wrapText||c.wrapImageData){const cv=document.createElement('canvas');cv.width=512;cv.height=192;const cx2=cv.getContext('2d');if(c.wrapImageData){const im=new Image();im.onload=()=>{cx2.drawImage(im,0,0,512,192);if(c.wrapText){cx2.fillStyle='#ffffff';cx2.strokeStyle='#10202b';cx2.lineWidth=7;cx2.font='900 42px Impact,Verdana';cx2.textAlign='center';cx2.strokeText(c.wrapText.slice(0,28),256,170);cx2.fillText(c.wrapText.slice(0,28),256,170)}liveryTex.needsUpdate=true};im.src=c.wrapImageData}else{cx2.fillStyle='rgba(10,20,28,.7)';cx2.fillRect(10,42,492,106);cx2.fillStyle='#fff';cx2.strokeStyle='#14232b';cx2.lineWidth=6;cx2.font='900 44px Impact,Verdana';cx2.textAlign='center';cx2.strokeText(c.wrapText.slice(0,28),256,105);cx2.fillText(c.wrapText.slice(0,28),256,105)}const liveryTex=new THREE.CanvasTexture(cv);liveryTex.encoding=THREE.sRGBEncoding;const lm=new THREE.MeshBasicMaterial({map:liveryTex,transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const side of[-1,1]){const decal=new THREE.Mesh(new THREE.PlaneGeometry(L*.58,.48),lm);decal.position.set(-.05,1.06,side*(W/2+.018));decal.rotation.y=side<0?Math.PI:0;shell.add(decal)}}
@@ -406,20 +465,22 @@ const FRAME_MIN=.45,FRAME_RATE=350,FRAME_CUBE_BASE=150;
 function frameVolume(p){return Math.max(FRAME_MIN,Number(p.l)||FRAME_MIN)*Math.max(FRAME_MIN,Number(p.w)||FRAME_MIN)*Math.max(FRAME_MIN,Number(p.h)||FRAME_MIN)}
 function frameExpansionCost(p){return Math.round(Math.max(0,frameVolume(p)-FRAME_MIN**3)*FRAME_RATE)}
 function totalFrameCost(c=cfgOf(S.sel)){return c.frameCubes.reduce((sum,p,i)=>sum+frameExpansionCost(p)+(i===0?0:FRAME_CUBE_BASE),0)}
-function selectedFrame(c=cfgOf(S.sel)){if(!c.frameCubes.length)c.frameCubes.push({x:0,y:1.15,z:0,l:.45,w:.45,h:.45,rotation:0});c.frameSelected=cl(Number(c.frameSelected)||0,0,c.frameCubes.length-1);return c.frameCubes[c.frameSelected]}
+function selectedFrame(c=cfgOf(S.sel)){if(!c.frameCubes.length)c.frameCubes.push({x:0,y:(V[S.sel]?.H||1.9)+.22,z:0,l:.45,w:.45,h:.45,rotation:0,roundness:0});c.frameSelected=cl(Number(c.frameSelected)||0,0,c.frameCubes.length-1);return c.frameCubes[c.frameSelected]}
 function setFrameColor(color){cfgOf(S.sel).frameColor=color;draw();rebuild();ui();save()}
 function toggleFrame(){const c=cfgOf(S.sel);c.frameEnabled=c.frameEnabled===false;rebuild();ui();save();msg(c.frameEnabled?'Cube frame shown':'Cube frame hidden')}
-function selectFrameCube(step){const c=cfgOf(S.sel);c.frameSelected=(cl(c.frameSelected||0,0,c.frameCubes.length-1)+step+c.frameCubes.length)%c.frameCubes.length;rebuild();ui();save()}
-function addFrameCube(axis,dir){const c=cfgOf(S.sel),parent=selectedFrame(c),price=FRAME_CUBE_BASE;if(S.cr<price)return msg('Need '+price+' credits for a new tiny cube');const q={x:parent.x,y:parent.y,z:parent.z,l:FRAME_MIN,w:FRAME_MIN,h:FRAME_MIN,rotation:Number(parent.rotation)||0};const a=q.rotation*Math.PI/180,co=Math.cos(a),si=Math.sin(a);let dx=0,dz=0;
+function focusSelectedFrameCube(){if(!car||!garageOpen||Mi.on)return;const p=selectedFrame(),f=cubeWorldCenter(p);setFreeCamFocus(f.x,f.y,f.z);updateFreeCamera()}
+function selectFrameCube(step){const c=cfgOf(S.sel);c.frameSelected=(cl(c.frameSelected||0,0,c.frameCubes.length-1)+step+c.frameCubes.length)%c.frameCubes.length;rebuild();ui();save();focusSelectedFrameCube()}
+function addFrameCube(axis,dir){const c=cfgOf(S.sel),parent=selectedFrame(c),price=FRAME_CUBE_BASE;if(S.cr<price)return msg('Need '+price+' credits for a new tiny cube');const q={x:parent.x,y:parent.y,z:parent.z,l:FRAME_MIN,w:FRAME_MIN,h:FRAME_MIN,rotation:Number(parent.rotation)||0,roundness:Number(parent.roundness)||0};const a=q.rotation*Math.PI/180,co=Math.cos(a),si=Math.sin(a);let dx=0,dz=0;
  if(axis==='x'){dx=dir*(parent.l+q.l)/2;dz=0}else if(axis==='z'){dx=0;dz=dir*(parent.w+q.w)/2}else if(axis==='y'){q.y=parent.y+dir*(parent.h+q.h)/2}
  if(axis==='x'||axis==='z'){q.x=parent.x+dx*co+dz*si;q.z=parent.z-dx*si+dz*co}
- c.frameCubes.push(q);c.frameSelected=c.frameCubes.length-1;c.frameEnabled=true;S.cr-=price;rebuild();ui();save();msg('Tiny cube attached for '+price+' credits. Stretch it to expand it (expansion price is based on volume).')}
-function removeFrameCube(){const c=cfgOf(S.sel);if(c.frameCubes.length<=1)return msg('Keep the starter cube');c.frameCubes.splice(c.frameSelected,1);c.frameSelected=cl(c.frameSelected,0,c.frameCubes.length-1);S.cr+=75;rebuild();ui();save();msg('Cube removed · 75 credits refunded')}
+ c.frameCubes.push(q);c.frameSelected=c.frameCubes.length-1;c.frameEnabled=true;S.cr-=price;rebuild();ui();save();focusSelectedFrameCube();msg('Tiny cube attached for '+price+' credits. Stretch it to expand it (expansion price is based on volume).')}
+function removeFrameCube(){const c=cfgOf(S.sel);if(c.frameCubes.length<=1)return msg('Keep the starter cube');c.frameCubes.splice(c.frameSelected,1);c.frameSelected=cl(c.frameSelected,0,c.frameCubes.length-1);S.cr+=75;rebuild();ui();save();focusSelectedFrameCube();msg('Cube removed · 75 credits refunded')}
 function resizeFrame(axis,v){const c=cfgOf(S.sel),p=selectedFrame(c),prop=axis==='frameLength'?'l':axis==='frameWidth'?'w':'h',max=axis==='frameLength'?7:4.5,old=Number(p[prop])||FRAME_MIN,oldCost=frameExpansionCost(p),next=cl(Number(v)||FRAME_MIN,FRAME_MIN,max);p[prop]=next;const newCost=frameExpansionCost(p),delta=newCost-oldCost;
  if(delta>0&&S.cr<delta){p[prop]=old;const input=$('#'+axis);if(input)input.value=old;msg('Not enough credits. Expanding this cube costs '+delta.toLocaleString()+' credits.');return}
  if(delta>0)S.cr-=delta;else if(delta<0)S.cr+=Math.floor((-delta)*.5);
  const id=axis+'Value';if($('#'+id))$('#'+id).textContent=p[prop].toFixed(2)+' m';rebuild();ui();save();if(delta>0)msg('Cube expanded · '+delta.toLocaleString()+' credits charged');}
 function rotateFrame(v){const c=cfgOf(S.sel),p=selectedFrame(c);p.rotation=cl(Number(v)||0,-180,180);$('#frameRotateValue').textContent=p.rotation+'°';rebuild();save();ui()}
+function roundFrame(v){const c=cfgOf(S.sel),p=selectedFrame(c);p.roundness=cl(Number(v)||0,0,45)/100;$('#frameRoundnessValue').textContent=Math.round(p.roundness*100)+'%';rebuild();save();ui()}
 function setWrapColor(v){cfgOf(S.sel).wrapColor=v;rebuild();save()}
 function setWrapText(v){cfgOf(S.sel).wrapText=(v||'').slice(0,28);rebuild();save()}
 function loadWrapImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/'))return msg('Choose an image file');const reader=new FileReader();reader.onload=()=>{const im=new Image();im.onload=()=>{const cv=document.createElement('canvas');cv.width=512;cv.height=192;const cx=cv.getContext('2d');const scale=Math.min(512/im.width,192/im.height);const w=im.width*scale,h=im.height*scale;cx.drawImage(im,(512-w)/2,(192-h)/2,w,h);const data=cv.toDataURL('image/jpeg',.72);cfgOf(S.sel).wrapImageData=data;rebuild();save();msg('Wrap image applied to both sides')};im.src=reader.result};reader.readAsDataURL(f)}
@@ -433,7 +494,7 @@ $('#veh').innerHTML=Object.keys(V).map(k=>`<button class="${k==S.sel?'on':''}" o
 const row=(t,arr,key,f)=>`<div>${t}: `+arr.map((p,i)=>`<button class="${c[key]==i?'on':''}" onclick="setO('${key}',${i},${f})">${i?(key=='armor'?'L'+i:key=='spk'?(i*4)+' spikes':'Fit'):'None'}${i&&p!=arr[c[key]]?' '+(p-arr[c[key]]>0?'+':'')+(p-arr[c[key]]):''}</button>`).join('')+'</div>';
 $('#opt').innerHTML=row('Armor',ARM,'armor','ARM')+row('Hail guard',HG,'hg','HG')+row('Anchor spikes',SPK,'spk','SPK');
 $('#shop').innerHTML=`<div><button onclick="buyAirbag()">${c.airbags?'Airbags fitted':'Buy airbags (1,200)'}</button></div><div><button onclick="buyProbe()">Buy probe (850)</button> <span style="color:var(--mu)">Owned: ${c.probes||0}</span></div><div><button onclick="repairWindshield()">Replace damaged windshield (350)</button></div><div class="subnote">Gas stations are marked on the map. Press R near a pump to refuel for 500 credits.</div>`;
-$('#frameColor').value=c.frameColor||'#e0701c';$('#wrapColor').value=c.wrapColor||('#'+V[S.sel].c.toString(16).padStart(6,'0'));$('#wrapText').value=c.wrapText||'';const fp=selectedFrame(c);$('#frameRotate').value=fp.rotation||0;$('#frameRotateValue').textContent=(fp.rotation||0)+'°';$('#frameSelectedLabel').textContent='Cube '+(c.frameSelected+1)+' / '+c.frameCubes.length;for(const axis of ['frameLength','frameWidth','frameHeight']){const prop=axis==='frameLength'?'l':axis==='frameWidth'?'w':'h';$('#'+axis).value=fp[prop]||1.5;$('#'+axis+'Value').textContent=(fp[prop]||FRAME_MIN).toFixed(2)+' m'}$('#frameLevelLabel').textContent=c.frameCubes.length+' cube module'+(c.frameCubes.length===1?'':'s')+' installed · starter size is 0.45 m';$('#framePrice').textContent='Selected cube volume: '+frameVolume(fp).toFixed(2)+' m³ · expansion price: '+frameExpansionCost(fp).toLocaleString()+' cr · total frame value: '+totalFrameCost(c).toLocaleString()+' cr';$('#frameToggle').textContent=c.frameEnabled!==false?'Hide cube frame':'Show cube frame';$('#stripButton').textContent=c.chassisOnly?'Restore body panels':'Strip body panels';
+$('#frameColor').value=c.frameColor||'#e0701c';$('#wrapColor').value=c.wrapColor||('#'+V[S.sel].c.toString(16).padStart(6,'0'));$('#wrapText').value=c.wrapText||'';const fp=selectedFrame(c);$('#frameRotate').value=fp.rotation||0;$('#frameRotateValue').textContent=(fp.rotation||0)+'°';$('#frameRoundness').value=Math.round((Number(fp.roundness)||0)*100);$('#frameRoundnessValue').textContent=Math.round((Number(fp.roundness)||0)*100)+'%';$('#frameSelectedLabel').textContent='Cube '+(c.frameSelected+1)+' / '+c.frameCubes.length;for(const axis of ['frameLength','frameWidth','frameHeight']){const prop=axis==='frameLength'?'l':axis==='frameWidth'?'w':'h';$('#'+axis).value=fp[prop]||FRAME_MIN;$('#'+axis+'Value').textContent=(fp[prop]||FRAME_MIN).toFixed(2)+' m'}$('#frameLevelLabel').textContent=c.frameCubes.length+' cube module'+(c.frameCubes.length===1?'':'s')+' installed · starter is a small solid 0.45 m block';$('#framePrice').textContent='Selected cube volume: '+frameVolume(fp).toFixed(2)+' m³ · expansion price: '+frameExpansionCost(fp).toLocaleString()+' cr · total frame value: '+totalFrameCost(c).toLocaleString()+' cr';$('#frameToggle').textContent=c.frameEnabled!==false?'Hide cube frame':'Show cube frame';$('#stripButton').textContent=c.chassisOnly?'Restore body panels':'Strip body panels';
 $('#windshieldShop').innerHTML=WINDSHIELD_NAMES.map((name,i)=>`<button class="${i===(c.windshieldTier||0)?'on':''}" ${i<=(c.windshieldTier||0)?'disabled':''} onclick="buyWindshield(${i})">${name}${i?' · '+WINDSHIELD_COST[i]+' cr':''}</button>`).join('');
 const[sl,ro]=lim(st,v,0),[sh]=lim(st,v,st.hold),mp=x=>Math.round(x*2.237),R=(a,b)=>`<div class="st"><span>${a}</span><b>${b}</b></div>`;
 $('#stat').innerHTML=R('Curb weight → loaded',Math.round(v.m)+' → '+Math.round(st.m)+' kg')+R('Drag Cd (front / broadside)',st.cdf.toFixed(3)+' / '+st.cds.toFixed(2))+R('Frontal / side area',st.af.toFixed(1)+' / '+st.as.toFixed(1)+' m²')+
@@ -460,11 +521,14 @@ fun.visible=pt.visible=hail.visible=false;sc.add(fun,pt,hail);
 const lightningMat=new THREE.LineBasicMaterial({color:0xd9f3ff,transparent:true,opacity:1});let lightningBolt=new THREE.Line(new THREE.BufferGeometry(),lightningMat);lightningBolt.visible=false;sc.add(lightningBolt);const lightningFlash=new THREE.PointLight(0xc5e4ff,0,520,2.0);sc.add(lightningFlash);
 let T=null,Mi={on:0,car:{x:HOME.x-8,z:HOME.z,a:HOME.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0}},gameStarted=false,garageOpen=false,firstPerson=false,mapExpanded=false,sirenEnabled=true,sirenCtx=null,sirenOsc=null,sirenGain=null;const keys={};
 // Free orbit camera: drag to rotate around the vehicle/world and scroll to zoom. The intercept camera tracks the storm until the player moves it manually.
-let cameraOrbitYaw=0,cameraOrbitPitch=.38,cameraOrbitDistance=8,garageOrbitDistance=5.5,cameraAutoTrackTornado=true,cameraDragState=null,lastCameraDragTime=0;
-function orbitCameraAroundCar(c,baseAngle,distance,targetY=1.2,aimAhead=2){const pitch=cl(cameraOrbitPitch,.08,1.15),horizontal=distance*Math.cos(pitch),theta=baseAngle+cameraOrbitYaw,fx=Math.cos(c.a),fz=-Math.sin(c.a);cam.position.set(c.x+Math.cos(theta)*horizontal,(c.y||0)+targetY+distance*Math.sin(pitch),c.z+Math.sin(theta)*horizontal);cam.lookAt(c.x+fx*aimAhead,(c.y||0)+targetY,c.z+fz*aimAhead)}
-function playGame(){gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;car.position.set(homeCar.x,0,homeCar.z);cam.position.set(homeCar.x-3.5,3.5,homeCar.z-4.5);cam.lookAt(homeCar.x+1.5,1.1,homeCar.z);$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';msg('Welcome to Silver Creek. Your vehicle is inside the home garage.')}
+let cameraOrbitYaw=Math.PI,cameraOrbitPitch=.34,cameraOrbitDistance=8,garageOrbitDistance=8,cameraAutoTrackTornado=false,cameraDragState=null,lastCameraDragTime=0,cameraPanX=0,cameraPanZ=0;
+let freeCamFocusX=0,freeCamFocusY=1.8,freeCamFocusZ=0,freeCamDetached=false,lastFocusDriverX=0,lastFocusDriverZ=0;
+function setFreeCamFocus(x,y,z){freeCamFocusX=x;freeCamFocusY=y;freeCamFocusZ=z;freeCamDetached=false;lastFocusDriverX=x;lastFocusDriverZ=z;updateFreeCamera()}
+function syncFreeCamToDriver(c){if(!freeCamDetached){const dx=c.x-lastFocusDriverX,dz=c.z-lastFocusDriverZ;freeCamFocusX+=dx;freeCamFocusZ+=dz;freeCamFocusY=(c.y||0)+1.45;lastFocusDriverX=c.x;lastFocusDriverZ=c.z}}
+function updateFreeCamera(){const d=(garageOpen&&!Mi.on)?garageOrbitDistance:cameraOrbitDistance,pitch=cl(cameraOrbitPitch,.035,1.52),horizontal=d*Math.cos(pitch);cam.position.set(freeCamFocusX+Math.cos(cameraOrbitYaw)*horizontal,freeCamFocusY+d*Math.sin(pitch),freeCamFocusZ+Math.sin(cameraOrbitYaw)*horizontal);cam.lookAt(freeCamFocusX,freeCamFocusY,freeCamFocusZ)}
+function playGame(){S.fuel=START_FUEL;save();gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;cameraOrbitYaw=Math.PI-homeCar.a;cameraOrbitPitch=.34;cameraOrbitDistance=8;garageOrbitDistance=4.2;cameraPanX=0;cameraPanZ=0;car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;car.updateMatrixWorld(true);const startBlock=selectedFrame(cfgOf(S.sel)),focus=car.localToWorld(new THREE.Vector3(startBlock.x,startBlock.y,startBlock.z));setFreeCamFocus(focus.x,focus.y,focus.z);freeCamDetached=false;$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';ui();msg('Welcome to Silver Creek. Starting fuel: 50%. The tiny solid block is selected. Drag its handles to build; drag empty space to orbit; right-drag to pan; scroll to zoom.')}
 function toggleAllUI(){if(!gameStarted)return;const hidden=document.body.classList.toggle('ui-hidden');$('#uiToggle').textContent=hidden?'SHOW UI [H]':'HIDE UI [H]';}
-function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;msg('Garage workbench opened')}else{garageOpen=false;$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
+function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Double-click a block to select it; drag a colored face, a corner, or the rotate ring.')}else{garageOpen=false;$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
 function setMapVisible(v){const el=$('#worldMapWrap');el.hidden=!v;$('#mapToggle').textContent=v?'HIDE MAP [M]':'SHOW MAP [M]';if(v)drawWorldMap()}
 function expandMap(){if($('#worldMapWrap').hidden){mapExpanded=true;setMapVisible(true)}else mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);drawWorldMap()}
 function toggleMap(){if(garageOpen&&!Mi.on){setMapVisible(false);return msg('Close the garage workbench before opening the map')}setMapVisible($('#worldMapWrap').hidden)}
@@ -478,9 +542,9 @@ for(const station of gasStations){const dx=station.x-player.x,dz=station.z-playe
 function refuelAtStation(){const carPos=Mi.on?Mi.car:homeCar;if(Math.abs(carPos.s||0)>2)return msg('Stop near the pump before refueling');const near=gasStations.reduce((best,g)=>{const d=Math.hypot(g.x-carPos.x,g.z-carPos.z);return d<best.d?{g,d}:best},{g:null,d:Infinity});if(!near.g||near.d>38)return msg('No gas station nearby. Find a yellow gas marker on the map.');if(S.fuel>=99)return msg('Fuel tank is already full');if(S.cr<500)return msg('Need 500 credits to fill the tank');S.cr-=500;S.fuel=100;save();ui();msg('Refueled at '+near.g.name)}
 function updateDeployAnimation(dt){if(!car||!car.userData)return;const bags=car.userData.airbags;if(bags){const target=car.userData.airTarget||0;const value=bags.scale.x;const next=value+(target-value)*Math.min(1,dt*5);bags.scale.setScalar(next);if(target===0&&next<.025){bags.visible=false;bags.scale.setScalar(.01)}}const sg=car.userData.sp;if(sg){const target=car.userData.spTarget===undefined?.95:car.userData.spTarget;for(const q of sg.children)q.position.y+=(target-q.position.y)*Math.min(1,dt*7)}}
 const homeCar={x:HOME.x-8,z:HOME.z,a:HOME.a,s:0,vx:0,vz:0,y:0};
-let fuelSaveClock=0;function updateFreeDrive(dt){if(!gameStarted||Mi.on)return;const c=homeCar;fuelSaveClock+=dt;if(fuelSaveClock>6){save();fuelSaveClock=0}if(!garageOpen){const throttle=(keys.w?1:0)-(keys.s?1:0);if(S.fuel<=0&&throttle!==0){c.s=0;if(!Mi.noFuelNotice){msg('Out of fuel. Find a gas station.');Mi.noFuelNotice=true}}else{Mi.noFuelNotice=false;c.s+=throttle*7*dt;c.s*=Math.exp(-.22*dt);c.s=cl(c.s,-8,27);if(Math.abs(c.s)>.1)S.fuel=Math.max(0,S.fuel-Math.abs(c.s)*dt*.008)}c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/5)*.9;c.x+=Math.cos(c.a)*c.s*dt;c.z+=-Math.sin(c.a)*c.s*dt;car.position.set(c.x,0,c.z);car.rotation.y=c.a}
-if(garageOpen){orbitCameraAroundCar(c,Math.PI-c.a,garageOrbitDistance,1.15,1.8)}else if(firstPerson){const fx=Math.cos(c.a+cameraOrbitYaw),fz=-Math.sin(c.a+cameraOrbitYaw),pitchOffset=cameraOrbitPitch-.38;cam.position.set(c.x+Math.cos(c.a)*.25,1.45,c.z-Math.sin(c.a)*.25);cam.lookAt(c.x+fx*25,1.45+Math.sin(pitchOffset)*25,c.z+fz*25)}else if(gameStarted){orbitCameraAroundCar(c,Math.PI-c.a,cameraOrbitDistance*1.35,1.25,2.5)}
-$('#freeHud').hidden=!gameStarted;$('#freeHud').innerHTML=`<b>${garageOpen?'HOME GARAGE':'FREE DRIVE · SILVER CREEK'}</b><br>Drag to orbit · wheel to zoom<br>Fuel <b style="color:${S.fuel<20?'#ff7777':'#8df5b1'}">${Math.round(S.fuel)}%</b> · ${Math.round(Math.abs(c.s)*2.237)} mph<br>${nearestStationText(c.x,c.z)}<br>W/S drive · A/D steer · V view · drag to orbit · wheel to zoom · R fuel`;updateRadar();if($('#worldMapWrap').hidden===false)drawWorldMap()}
+let fuelSaveClock=0;function updateFreeDrive(dt){if(!gameStarted||Mi.on)return;const c=homeCar,oldX=c.x,oldZ=c.z;fuelSaveClock+=dt;if(fuelSaveClock>6){save();fuelSaveClock=0}if(!garageOpen){const throttle=(keys.w?1:0)-(keys.s?1:0);if(S.fuel<=0&&throttle!==0){c.s=0;if(!Mi.noFuelNotice){msg('Out of fuel. Find a gas station.');Mi.noFuelNotice=true}}else{Mi.noFuelNotice=false;c.s+=throttle*7*dt;c.s*=Math.exp(-.22*dt);c.s=cl(c.s,-8,27);if(Math.abs(c.s)>.1)S.fuel=Math.max(0,S.fuel-Math.abs(c.s)*dt*.008)}c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/5)*.9;c.x+=Math.cos(c.a)*c.s*dt;c.z+=-Math.sin(c.a)*c.s*dt;car.position.set(c.x,0,c.z);car.rotation.y=c.a}
+if(!garageOpen&&!freeCamDetached){syncFreeCamToDriver(c)}if(firstPerson&&!garageOpen){const fx=Math.cos(c.a+cameraOrbitYaw),fz=-Math.sin(c.a+cameraOrbitYaw),pitchOffset=cameraOrbitPitch-.38;cam.position.set(c.x+Math.cos(c.a)*.25,1.45,c.z-Math.sin(c.a)*.25);cam.lookAt(c.x+fx*25,1.45+Math.sin(pitchOffset)*25,c.z+fz*25)}else if(gameStarted){updateFreeCamera()}
+$('#freeHud').hidden=!gameStarted;$('#freeHud').innerHTML=`<b>${garageOpen?'HOME GARAGE':'FREE DRIVE · SILVER CREEK'}</b><br>Drag to orbit · wheel to zoom<br>Fuel <b style="color:${S.fuel<20?'#ff7777':'#8df5b1'}">${Math.round(S.fuel)}%</b> · ${Math.round(Math.abs(c.s)*2.237)} mph<br>${nearestStationText(c.x,c.z)}<br>W/S drive · A/D steer · V view · drag free cam · right-drag pan · wheel zoom · R fuel`;updateRadar();if($('#worldMapWrap').hidden===false)drawWorldMap()}
 function nearestStationText(x,z){const near=gasStations.reduce((b,g)=>{const d=Math.hypot(g.x-x,g.z-z);return d<b.d?{d,g}:b},{d:Infinity,g:null});return near.g?`${near.g.name}: ${Math.round(near.d)} m`:'No station nearby'}
 
 const wind=(px,pz)=>{const dx=px-T.x,dz=pz-T.z,r=Math.hypot(dx,dz)+.01,vt=T.v*(r<T.R?r/T.R:Math.pow(T.R/r,.6)),vr=-.35*vt;
@@ -517,10 +581,12 @@ function updateBuildings(dt){
  }
 }
 function updateDebris(dt){for(let i=debrisPieces.length-1;i>=0;i--){const d=debrisPieces[i];d.life-=dt;d.vy-=9.8*dt;d.mesh.position.x+=d.vx*dt;d.mesh.position.z+=d.vz*dt;d.mesh.position.y+=d.vy*dt;d.mesh.rotation.x+=d.spin*dt;d.mesh.rotation.z+=d.spin*.7*dt;if(d.mesh.position.y<.18){d.mesh.position.y=.18;d.vy=Math.max(0,-d.vy*.25);d.vx*=.78;d.vz*=.78}if(d.life<=0){sc.remove(d.mesh);d.mesh.geometry.dispose();debrisPieces.splice(i,1)}}}
-function go(){if(!gameStarted){playGame()}cameraAutoTrackTornado=true;if(sirenEnabled){try{if(!sirenCtx)sirenCtx=new (window.AudioContext||window.webkitAudioContext)();if(sirenCtx.state==='suspended')sirenCtx.resume()}catch(e){}}const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<18?0:q<43?1:q<67?2:q<84?3:q<95?4:5,
+function go(){if(!gameStarted){playGame()}cameraAutoTrackTornado=false;if(sirenEnabled){try{if(!sirenCtx)sirenCtx=new (window.AudioContext||window.webkitAudioContext)();if(sirenCtx.state==='suspended')sirenCtx.resume()}catch(e){}}const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<18?0:q<43?1:q<67?2:q<84?3:q<95?4:5,
 rg=[[65,85],[86,110],[111,135],[136,165],[166,200],[201,250]][e],peakMph=rg[0]+Math.random()*(rg[1]-rg[0]),an=Math.random()*6.28,d=620+Math.random()*260;
 T={x:homeCar.x+Math.cos(an)*d,z:homeCar.z+Math.sin(an)*d,R:65+Math.random()*60+e*7,baseR:65+Math.random()*60+e*7,v:Math.max(2,peakMph/2.237*.07),peakV:peakMph/2.237,peakMph,ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:3+Math.random()*3,baseSp:3+Math.random()*3,hail:Math.random()<.6?.45+Math.random()*.55:0,history:[],lastTrail:-10,formTimer:0,formDuration:12+Math.random()*4,formed:false,phase:'SUPERCELL WATCH',baseX:homeCar.x+Math.cos(an)*d,baseZ:homeCar.z+Math.sin(an)*d};
 T.R0=T.R;T.sp=T.baseSp;
+// Initial composition points toward the storm's starting position once; it never auto-locks or follows it afterward.
+const stormDx=T.x-homeCar.x,stormDz=T.z-homeCar.z;cameraOrbitYaw=Math.atan2(-stormDz,-stormDx);cameraOrbitPitch=.22;cameraOrbitDistance=11;freeCamDetached=false;lastFocusDriverX=homeCar.x;lastFocusDriverZ=homeCar.z;
 Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,firstPerson,probesLeft:c.probes||0,probes:[],probeCameraIndex:-1,lastCollapseNotice:-10,windHits:c.windshieldHits||0,windshieldBroken:!!c.windshieldBroken,hailHitTimer:0,lightningClock:2+Math.random()*5,lightningFlash:0,car:{x:homeCar.x,z:homeCar.z,a:homeCar.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0}};
 sc.remove(car);car=mk(k,c,false);sc.add(car);car.position.set(Mi.car.x,0,Mi.car.z);fun.visible=false;pt.visible=false;hail.visible=false;lightningBolt.visible=false;
 $('#pn').hidden=true;garageOpen=false;$('#freeHud').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';msg('Storm watch issued. Rotation is developing; no tornado on the ground yet.');}
@@ -546,14 +612,56 @@ function viewProbeCamera(index){
 }
 function toggleProbeCamera(){if(!Mi.on)return;if(!Mi.probes||!Mi.probes.length)return msg('No deployed probes. Exit the vehicle and press F to deploy one.');if(Mi.probeCameraIndex<0){viewProbeCamera(0);return}if(Mi.probeCameraIndex<Mi.probes.length-1){viewProbeCamera(Mi.probeCameraIndex+1);return}viewProbeCamera(Mi.probeCameraIndex)}
 const worldCanvas=$('#c');
-worldCanvas.addEventListener('pointerdown',e=>{if(e.button!==0||document.pointerLockElement===worldCanvas)return;cameraDragState={x:e.clientX,y:e.clientY,moved:false,pointerId:e.pointerId};try{worldCanvas.setPointerCapture(e.pointerId)}catch(_){}});
-worldCanvas.addEventListener('pointermove',e=>{if(!cameraDragState||cameraDragState.pointerId!==e.pointerId)return;const dx=e.clientX-cameraDragState.x,dy=e.clientY-cameraDragState.y;cameraDragState.x=e.clientX;cameraDragState.y=e.clientY;if(Math.abs(dx)+Math.abs(dy)>2)cameraDragState.moved=true;if(!dx&&!dy)return;if(Mi.on&&Mi.exit&&Mi.probeCameraIndex<0&&Mi.player){Mi.player.yaw-=dx*.006;Mi.player.pitch=cl((Mi.player.pitch||0)-dy*.004,-1.05,1.05)}else{cameraOrbitYaw-=dx*.006;cameraOrbitPitch=cl(cameraOrbitPitch+dy*.004,.08,1.15);cameraAutoTrackTornado=false}});
-worldCanvas.addEventListener('pointerup',e=>{if(!cameraDragState||cameraDragState.pointerId!==e.pointerId)return;if(cameraDragState.moved)lastCameraDragTime=performance.now();cameraDragState=null});
-worldCanvas.addEventListener('pointercancel',()=>{cameraDragState=null});
-worldCanvas.addEventListener('wheel',e=>{if(garageOpen&&!Mi.on)garageOrbitDistance=cl(garageOrbitDistance+Math.sign(e.deltaY)*.7,4.2,10);else cameraOrbitDistance=cl(cameraOrbitDistance+Math.sign(e.deltaY)*.9,4.5,24);e.preventDefault()},{passive:false});
+worldCanvas.addEventListener('contextmenu',e=>e.preventDefault());
+function hitTestFrameGizmo(e){if(!car||!car.userData.frameGizmo||!garageOpen||Mi.on)return null;const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(ndc,cam);const hits=ray.intersectObjects(car.userData.frameGizmo.children,true);return hits.find(h=>h.object.userData&&h.object.userData.gizmoHandle)||null}
+function hitTestFrameBlock(e){if(!car||!car.userData.cubeFrame||!garageOpen||Mi.on)return null;const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(ndc,cam);const hits=ray.intersectObjects(car.userData.cubeFrame.children,true);for(const hit of hits){let obj=hit.object;while(obj&&obj.userData.frameCubeIndex===undefined)obj=obj.parent;if(obj&&obj.userData.frameCubeIndex!==undefined)return obj.userData.frameCubeIndex}return null}
+function cubeWorldCenter(p){car.updateMatrixWorld(true);return car.localToWorld(new THREE.Vector3(p.x,p.y,p.z))}
+worldCanvas.addEventListener('dblclick',e=>{if(!gameStarted||Mi.on||!garageOpen||!car||!car.userData.cubeFrame)return;const idx=hitTestFrameBlock(e);if(idx===null)return;const c=cfgOf(S.sel);c.frameSelected=idx;rebuild();ui();save();const p=selectedFrame(c),f=cubeWorldCenter(p);garageOrbitDistance=Math.min(garageOrbitDistance,4.2);setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Cube '+(idx+1)+' selected · white outline and resize/rotate handles active');e.preventDefault()});
+const FRAME_HANDLE_MAX={l:7,w:4.5,h:4.5};
+function localAxis(axis,rotation){const a=(Number(rotation)||0)*Math.PI/180;return axis==='x'?new THREE.Vector3(Math.cos(a),0,-Math.sin(a)):axis==='z'?new THREE.Vector3(Math.sin(a),0,Math.cos(a)):new THREE.Vector3(0,1,0)}
+function projectedAxisPixels(axis,p){car.updateMatrixWorld(true);const base=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z)),rot=car.rotation.y,vec=localAxis(axis,p.rotation).applyAxisAngle(new THREE.Vector3(0,1,0),rot),a=base.clone().project(cam),b=base.clone().add(vec).project(cam),rect=worldCanvas.getBoundingClientRect();return{x:(b.x-a.x)*rect.width/2,y:-(b.y-a.y)*rect.height/2}}
+function activeCameraDistance(){return garageOpen&&!Mi.on?garageOrbitDistance:cameraOrbitDistance}
+function pixelsToAxisDelta(axis,p,dx,dy){const v=projectedAxisPixels(axis,p),den=v.x*v.x+v.y*v.y,dist=activeCameraDistance();if(den<.0001)return -dy*(2*dist*Math.tan(cam.fov*Math.PI/360)/Math.max(200,worldCanvas.clientHeight));return(dx*v.x+dy*v.y)/den}
+function copyPart(p){return{x:p.x,y:p.y,z:p.z,l:p.l,w:p.w,h:p.h,rotation:p.rotation||0,roundness:p.roundness||0}}
+function beginFrameDrag(handle,e){const c=cfgOf(S.sel),idx=cl(c.frameSelected||0,0,c.frameCubes.length-1),p=c.frameCubes[idx];frameDragState={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,idx,action:handle.userData.gizmoAction,axis:handle.userData.axis,dir:handle.userData.dir,corner:handle.userData.corner?handle.userData.corner.slice():null,start:copyPart(p),startCredits:S.cr,startCost:frameExpansionCost(p),startAngle:0,moved:false};if(frameDragState.action==='rotate'){const world=cubeWorldCenter(p),pr=world.project(cam),rect=worldCanvas.getBoundingClientRect(),sx=rect.left+(pr.x+1)*rect.width/2,sy=rect.top+(1-pr.y)*rect.height/2;frameDragState.centerScreen={x:sx,y:sy};frameDragState.startAngle=Math.atan2(e.clientY-sy,e.clientX-sx)}try{worldCanvas.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()}
+function applyFrameDrag(e){const d=frameDragState;if(!d)return;const c=cfgOf(S.sel),p=c.frameCubes[d.idx],o=d.start,dx=e.clientX-d.startX,dy=e.clientY-d.startY;let q=copyPart(o);
+ if(d.action==='resize'){
+  const delta=pixelsToAxisDelta(d.axis,o,dx,dy)*d.dir,prop=d.axis==='x'?'l':d.axis==='y'?'h':'w',old=o[prop],max=FRAME_HANDLE_MAX[prop],next=cl(old+delta,FRAME_MIN,max),actual=next-old,axis=localAxis(d.axis,o.rotation);q[prop]=next;q.x=o.x+axis.x*d.dir*actual/2;q.y=o.y+axis.y*d.dir*actual/2;q.z=o.z+axis.z*d.dir*actual/2;
+ }else if(d.action==='corner'){
+  const dist=2*activeCameraDistance()*Math.tan(cam.fov*Math.PI/360)/Math.max(200,worldCanvas.clientHeight),delta=-dy*dist*2.3;
+  const vals={l:cl(o.l+delta,FRAME_MIN,FRAME_HANDLE_MAX.l),w:cl(o.w+delta,FRAME_MIN,FRAME_HANDLE_MAX.w),h:cl(o.h+delta,FRAME_MIN,FRAME_HANDLE_MAX.h)};
+  const diff={l:vals.l-o.l,w:vals.w-o.w,h:vals.h-o.h},sg=d.corner,a=(Number(o.rotation)||0)*Math.PI/180;
+  q.l=vals.l;q.w=vals.w;q.h=vals.h;q.x=o.x+sg[0]*diff.l/2*Math.cos(a)+sg[2]*diff.w/2*Math.sin(a);q.z=o.z-sg[0]*diff.l/2*Math.sin(a)+sg[2]*diff.w/2*Math.cos(a);q.y=o.y+sg[1]*diff.h/2;
+ }else if(d.action==='rotate'){
+  const ang=Math.atan2(e.clientY-d.centerScreen.y,e.clientX-d.centerScreen.x);let delta=ang-d.startAngle;while(delta>Math.PI)delta-=Math.PI*2;while(delta<-Math.PI)delta+=Math.PI*2;q.rotation=cl(o.rotation+delta*180/Math.PI,-180,180);
+ }
+ // Price is based on volume. If a drag exceeds the wallet, clamp to the largest affordable point.
+ let cost=frameExpansionCost(q),increase=cost-d.startCost;if(increase>d.startCredits){let lo=0,hi=1;for(let i=0;i<18;i++){const t=(lo+hi)/2,test={};for(const k of ['x','y','z','l','w','h','rotation','roundness'])test[k]=(o[k]||0)+((q[k]||0)-(o[k]||0))*t;if(frameExpansionCost(test)-d.startCost<=d.startCredits)lo=t;else hi=t}for(const k of ['x','y','z','l','w','h','rotation','roundness'])q[k]=(o[k]||0)+((q[k]||0)-(o[k]||0))*lo;cost=frameExpansionCost(q);increase=cost-d.startCost}
+ Object.assign(p,q);S.cr=d.startCredits-Math.max(0,increase)+Math.floor(Math.max(0,-increase)*.5);
+ updateLiveFrameBlock(d.idx,p);d.moved=Math.abs(dx)+Math.abs(dy)>2;syncLiveFrameControls(p);}
+function updateLiveFrameBlock(idx,p){if(!car)return;const root=car.userData.cubeFrame,grp=root&&root.children.find(o=>o.userData.frameCubeIndex===idx);if(grp){grp.position.set(p.x,p.y,p.z);grp.rotation.y=(p.rotation||0)*Math.PI/180;const solid=grp.children.find(o=>o.isMesh);if(solid){solid.geometry.dispose();solid.geometry=makeSolidBlockGeometry(p.l,p.h,p.w,(p.roundness||0)*100)}const outline=grp.children.find(o=>o.isLineSegments);if(outline){outline.geometry.dispose();outline.geometry=new THREE.EdgesGeometry(new THREE.BoxGeometry(p.l+.018,p.h+.018,p.w+.018))}}
+ if(car.userData.frameGizmo&&idx===cfgOf(S.sel).frameSelected)updateFrameGizmoVisual(car.userData.frameGizmo,p);}
+function syncLiveFrameControls(p){for(const axis of ['frameLength','frameWidth','frameHeight']){const prop=axis==='frameLength'?'l':axis==='frameWidth'?'w':'h';$('#'+axis).value=p[prop];$('#'+axis+'Value').textContent=p[prop].toFixed(2)+' m'}$('#frameRotate').value=p.rotation||0;$('#frameRotateValue').textContent=(p.rotation||0).toFixed(0)+'°';$('#frameRoundness').value=Math.round((p.roundness||0)*100);$('#frameRoundnessValue').textContent=Math.round((p.roundness||0)*100)+'%';$('#framePrice').textContent='Selected cube volume: '+frameVolume(p).toFixed(2)+' m³ · expansion price: '+frameExpansionCost(p).toLocaleString()+' cr · total frame value: '+totalFrameCost().toLocaleString()+' cr';$('#cr').innerHTML='Credits: <b style="color:var(--ok)">'+S.cr.toLocaleString()+'</b><br>Fuel reserve: <b style="color:'+(S.fuel<20?'#ff7777':'#83eeb1')+'">'+Math.round(S.fuel)+'%</b>'}
+let frameDragState=null;
+worldCanvas.addEventListener('pointerdown',e=>{
+ if((e.button!==0&&e.button!==2)||document.pointerLockElement===worldCanvas)return;
+ if(e.button===0&&gameStarted&&garageOpen&&!Mi.on){const hit=hitTestFrameGizmo(e);if(hit){beginFrameDrag(hit.object,e);return}}
+ cameraDragState={x:e.clientX,y:e.clientY,moved:false,pointerId:e.pointerId,pan:e.button===2||e.shiftKey};try{worldCanvas.setPointerCapture(e.pointerId)}catch(_){}
+});
+worldCanvas.addEventListener('pointermove',e=>{
+ if(frameDragState&&frameDragState.pointerId===e.pointerId){applyFrameDrag(e);return}
+ if(!cameraDragState||cameraDragState.pointerId!==e.pointerId)return;const dx=e.clientX-cameraDragState.x,dy=e.clientY-cameraDragState.y;cameraDragState.x=e.clientX;cameraDragState.y=e.clientY;if(Math.abs(dx)+Math.abs(dy)>2)cameraDragState.moved=true;if(!dx&&!dy)return;
+ if(Mi.on&&Mi.exit&&Mi.probeCameraIndex<0&&Mi.player&&!cameraDragState.pan){Mi.player.yaw-=dx*.006;Mi.player.pitch=cl((Mi.player.pitch||0)-dy*.004,-1.05,1.05)}else if(cameraDragState.pan){freeCamDetached=true;const scale=((garageOpen&&!Mi.on)?garageOrbitDistance:cameraOrbitDistance)*.025,rightX=-Math.sin(cameraOrbitYaw),rightZ=Math.cos(cameraOrbitYaw),forwardX=Math.cos(cameraOrbitYaw),forwardZ=Math.sin(cameraOrbitYaw);freeCamFocusX+=(-dx*rightX+dy*forwardX)*scale;freeCamFocusZ+=(-dx*rightZ+dy*forwardZ)*scale;freeCamFocusY=cl(freeCamFocusY+dy*scale*.12,.2,700);cameraPanX=freeCamFocusX;cameraPanZ=freeCamFocusZ;updateFreeCamera()}else{freeCamDetached=true;cameraOrbitYaw-=dx*.006;cameraOrbitPitch=cl(cameraOrbitPitch+dy*.004,.035,1.52);cameraAutoTrackTornado=false;updateFreeCamera()}
+});
+worldCanvas.addEventListener('pointerup',e=>{
+ if(frameDragState&&frameDragState.pointerId===e.pointerId){const changed=frameDragState.moved;frameDragState=null;rebuild();ui();save();focusSelectedFrameCube();if(changed)lastCameraDragTime=performance.now();return}
+ if(!cameraDragState||cameraDragState.pointerId!==e.pointerId)return;if(cameraDragState.moved)lastCameraDragTime=performance.now();cameraDragState=null
+});
+worldCanvas.addEventListener('pointercancel',()=>{cameraDragState=null;if(frameDragState){frameDragState=null;rebuild();ui();save()}});
+worldCanvas.addEventListener('wheel',e=>{if(garageOpen&&!Mi.on)garageOrbitDistance=cl(garageOrbitDistance+Math.sign(e.deltaY)*.7,3,40);else cameraOrbitDistance=cl(cameraOrbitDistance+Math.sign(e.deltaY)*.9,3,80);e.preventDefault()},{passive:false});
 worldCanvas.addEventListener('click',()=>{if(performance.now()-lastCameraDragTime<280)return;if(Mi.on&&Mi.exit&&worldCanvas.requestPointerLock)worldCanvas.requestPointerLock()});
 document.addEventListener('mousemove',e=>{if(Mi.on&&Mi.exit&&document.pointerLockElement===worldCanvas&&Mi.player){Mi.player.yaw-=e.movementX*.002;Mi.player.pitch=cl((Mi.player.pitch||0)-e.movementY*.002,-1.05,1.05)}});
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(e.target&&(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))&&['g','v','r','m','y','e','f','h','p','c'].includes(k))return;if(k==='h'&&gameStarted){e.preventDefault();toggleAllUI();return}keys[k]=1;if(e.repeat&&['y','m','e','f','g','v','r','p','c'].includes(k))return;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(k==='r'){e.preventDefault();refuelAtStation();return}if(k==='g'){e.preventDefault();toggleGarage();return}if(k==='v'){e.preventDefault();firstPerson=!firstPerson;msg(firstPerson?'First-person driving view · drag to look around':'Third-person camera · drag to orbit');return}if(k==='c'&&Mi.on&&T){e.preventDefault();cameraOrbitPitch=.38;if(firstPerson){cameraOrbitYaw=-Math.atan2(T.z-Mi.car.z,T.x-Mi.car.x)-Mi.car.a;cameraAutoTrackTornado=false;msg('First-person view pointed toward the storm')}else{cameraOrbitYaw=0;cameraAutoTrackTornado=true;msg('Camera centered on the tornado')}return}if(k==='m'){e.preventDefault();toggleMap();return}if(k==='p'){e.preventDefault();toggleProbeCamera();return}if(!Mi.on)return;if(Mi.probeCameraIndex>=0&&!['h','m','p','`'].includes(k)){keys[k]=0;return}if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(e.target&&(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))&&['g','v','r','m','y','e','f','h','p'].includes(k))return;if(k==='h'&&gameStarted){e.preventDefault();toggleAllUI();return}keys[k]=1;if(e.repeat&&['y','m','e','f','g','v','r','p'].includes(k))return;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(k==='r'){e.preventDefault();refuelAtStation();return}if(k==='g'){e.preventDefault();toggleGarage();return}if(k==='v'){e.preventDefault();firstPerson=!firstPerson;msg(firstPerson?'First-person driving view · drag to look around':'Third-person camera · drag to orbit');return}if(k==='m'){e.preventDefault();toggleMap();return}if(k==='p'){e.preventDefault();toggleProbeCamera();return}if(!Mi.on)return;if(Mi.probeCameraIndex>=0&&!['h','m','p','`'].includes(k)){keys[k]=0;return}if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
 if(k==' '){e.preventDefault();const c=Mi.car,cf=cfgOf(Mi.k);if(Mi.exit)return;if(!cf.spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.spikeDeploy=1;c.s=0;sp(1);msg('Spikes anchored')}else{c.spikeDeploy=1;sp(1);msg('Spikes down; slow to anchor')}}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
 function mission(dt){
@@ -578,7 +686,7 @@ function mission(dt){
  if(car.userData.cracks)car.userData.cracks.visible=firstPerson&&Mi.windHits>0&&!Mi.exit;
  Mi.hp-=dmg;c.x+=(fx*c.s+c.vx)*dt;c.z+=(fz*c.s+c.vz)*dt;
  if(Math.abs(c.s)>.2&&S.fuel>0)S.fuel=Math.max(0,S.fuel-Math.abs(c.s)*dt*.008);if(S.fuel<=0){c.s=0;if(!Mi.noFuel){Mi.noFuel=true;msg('Fuel exhausted. Stop and refuel at a gas station.')}}
- car.position.set(c.x,c.y,c.z);car.rotation.y=c.a;car.rotation.x=c.tilt||0;
+ car.position.set(c.x,c.y,c.z);car.rotation.y=c.a;car.rotation.x=c.tilt||0;if(!freeCamDetached)syncFreeCamToDriver(c);
  let wx=wCar.x,wz=wCar.z,windRange=wCar.r;
  if(Mi.exit&&Mi.player&&Mi.probeCameraIndex<0){const p=Mi.player,fwX=Math.cos(p.yaw),fwZ=-Math.sin(p.yaw),rightX=Math.sin(p.yaw),rightZ=Math.cos(p.yaw),fwd=(keys.w?1:0)-(keys.s?1:0),side=(keys.d?1:0)-(keys.a?1:0),pw=wind(p.x,p.z);p.x+=(fwX*fwd+rightX*side)*4.2*dt+pw.x*.018*dt;p.z+=(fwZ*fwd+rightZ*side)*4.2*dt+pw.z*.018*dt;wx=pw.x;wz=pw.z;windRange=pw.r;cam.position.set(p.x,1.65,p.z);cam.lookAt(p.x+fwX*12,1.65+Math.sin(p.pitch||0)*12,p.z+fwZ*12)}
  else if(Mi.probeCameraIndex>=0&&Mi.probes[Mi.probeCameraIndex]){
@@ -589,8 +697,7 @@ function mission(dt){
   cam.lookAt(probe.x+dirX*34,2.2,probe.z+dirZ*34);
  }
  else if(firstPerson&&!Mi.exit){const lookA=c.a+cameraOrbitYaw,lookFx=Math.cos(lookA),lookFz=-Math.sin(lookA),pitchOffset=cameraOrbitPitch-.38;cam.position.set(c.x+fx*.28,c.y+1.36,c.z+fz*.28);cam.lookAt(c.x+lookFx*25,c.y+1.36+Math.sin(pitchOffset)*25,c.z+lookFz*25)}
- else if(cameraAutoTrackTornado&&!Mi.exit&&T){const dxStorm=T.x-c.x,dzStorm=T.z-c.z,stormLen=Math.hypot(dxStorm,dzStorm)||1,dirX=dxStorm/stormLen,dirZ=dzStorm/stormLen,pitch=cl(cameraOrbitPitch,.08,1.15),dist=cameraOrbitDistance*1.6,horizontal=dist*Math.cos(pitch),theta=Math.atan2(dirZ,dirX)+Math.PI;cam.position.set(c.x+Math.cos(theta)*horizontal,c.y+1.8+dist*Math.sin(pitch),c.z+Math.sin(theta)*horizontal);cam.lookAt(T.x,cl(stormLen*.07,22,72),T.z)}
- else{orbitCameraAroundCar(c,Math.PI-c.a,cameraOrbitDistance*1.6,1.5,2.2);cam.position.x+=(Math.random()-.5)*wsCar*.004}
+ else{updateFreeCamera()}
  const ha_=hail.geometry.attributes.position;for(let i=0;i<HN;i++){ha[i*3+1]-=28*dt;if(ha[i*3+1]<0)ha[i*3+1]=40}hail.position.set(c.x,0,c.z);ha_.needsUpdate=true;
  const dataW=windRange,ws=Math.hypot(wx,wz),depthBoost=dataW<T.R?4:dataW<T.R*1.25?2:1;
  if(dataW<1.6*T.R)Mi.data+=(ws/10)**2*dt*1.5*(1+T.ef*.1)*depthBoost;
