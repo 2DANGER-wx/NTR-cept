@@ -29,9 +29,11 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 <h2>Frame: draw it yourself (drag to add or erase, nose points right)</h2><canvas id="fr"></canvas>
 <div><button onclick="pre(1)">Roll cage</button><button onclick="pre(2)">Plow wedge</button><button onclick="pre(3)">Fortress</button><button onclick="pre(0)">Clear</button></div>
 <h2>Armor, hail guard, anchor spikes</h2><div id="opt"></div>
+<h2>Equipment shop</h2><div id="shop"></div>
+<h2>Frame color</h2><div><input id="frameColor" aria-label="Frame color" type="color" value="#e0701c" onchange="setFrameColor(this.value)"> <span style="color:var(--mu);font-size:12px">Customize your frame tubing</span></div>
 <h2>Physics readout</h2><div id="stat"></div>
 <button id="go" onclick="go()">INTERCEPT</button>
-<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer, Space drops or lifts anchor spikes. Stay inside the vortex to collect data. Press ` (backtick) to leave the field and bank the data you've collected.</p></div>
+<p style="color:var(--mu);font-size:12px">Drive: W/S throttle, A/D steer. Y deploys your airbags and any fitted spikes; Space toggles anchor spikes. Press E to exit/re-enter the car, click the world and move the mouse to look around, then use W/A/S/D to walk and F to deploy a purchased probe. Deeper tornado penetration earns more data. Press ` (backtick) to leave the field and bank your data.</p></div>
 <div id="res" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -46,7 +48,7 @@ f350:{n:'Ford F-350 Dually',p:20000,m:3200,cd:.45,L:6.7,W:2.4,H:2.05,wb:4.1,c:0x
 const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900];
 let S={cr:3000,own:{tahoe:1},sel:'tahoe',cfg:{}};
 try{const j=localStorage.getItem('ntrcept');if(j)S=JSON.parse(j)}catch(e){}
-const cfgOf=k=>S.cfg[k]||(S.cfg[k]={cells:[],armor:0,hg:0,spk:0});
+const cfgOf=k=>{S.cfg[k]=Object.assign({cells:[],armor:0,hg:0,spk:0,airbags:0,probes:0,frameColor:'#e0701c'},S.cfg[k]||{});return S.cfg[k]};
 const save=()=>{try{localStorage.setItem('ntrcept',JSON.stringify(S))}catch(e){}};
 function msg(t){const m=$('#msg');m.textContent=t;m.style.opacity=1;clearTimeout(msg.t);msg.t=setTimeout(()=>m.style.opacity=0,2200)}
 // ---------- three.js ----------
@@ -63,6 +65,18 @@ else{const t=new THREE.Mesh(new THREE.ConeGeometry(3,12,7),new THREE.MeshStandar
 const U=new THREE.BoxGeometry(1,1,1),WG=new THREE.CylinderGeometry(.42,.42,.3,16),SG=new THREE.ConeGeometry(.09,.8,8),mats={};WG.rotateX(Math.PI/2);SG.rotateX(Math.PI);
 const M=(c,o={})=>mats[c+JSON.stringify(o)]||(mats[c+JSON.stringify(o)]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5,metalness:.3},o)));
 const B=(g,w,h,d,x,y,z,m)=>{const q=new THREE.Mesh(U,m);q.scale.set(w,h,d);q.position.set(x,y,z);g.add(q);return q};
+// A simple road grid makes the environment navigable and gives civilian traffic lanes.
+const roadGroup=new THREE.Group();sc.add(roadGroup);
+const asphalt=M(0x30343a,{roughness:.98,metalness:0}),roadWhite=M(0xd8d8cf,{roughness:.9,metalness:0}),roadYellow=M(0xe4bc45,{roughness:.9,metalness:0});
+const ROAD_SPAN=4500;
+for(let p=-2000;p<=2000;p+=500){
+  B(roadGroup,11,.08,ROAD_SPAN,p,.055,0,asphalt);
+  B(roadGroup,.13,.025,ROAD_SPAN,p-4.85,.105,0,roadWhite);B(roadGroup,.13,.025,ROAD_SPAN,p+4.85,.105,0,roadWhite);
+  B(roadGroup,.12,.028,ROAD_SPAN,p-.12,.108,0,roadYellow);B(roadGroup,.12,.028,ROAD_SPAN,p+.12,.108,0,roadYellow);
+  B(roadGroup,ROAD_SPAN,.08,11,0,.055,p,asphalt);
+  B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p-4.85,roadWhite);B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p+4.85,roadWhite);
+  B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p-.12,roadYellow);B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p+.12,roadYellow);
+}
 // builds the vehicle exactly as configured: body, armor, hail guard, spikes, drawn frame
 function mk(k,c,dep){
 const v=V[k],g=new THREE.Group(),L=v.L,W=v.W,H=v.H,bd=M(v.c),gl=M(0x0a0e12,{metalness:.9,roughness:.1}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
@@ -82,12 +96,41 @@ if(c.hg){const m=M(0x9fb0ba),y=H+.3;for(let i=0;i<=6;i++)B(g,.04,.04,W*1.02,a+cw
 const sp=new THREE.Group(),sm=M(0xcfd6db,{metalness:.9});
 for(let i=0;i<c.spk*4;i++){const q=new THREE.Mesh(SG,sm),r=i<4;q.position.set([1,1,-1,-1][i%4]*L*(r?.38:.14),dep?.4:.95,[1,-1,1,-1][i%4]*(W/2-.25));sp.add(q)}
 g.add(sp);g.userData.sp=sp;
-const fm=M(0xe0701c,{metalness:.6}),h=new Set(c.cells);
+const fm=M(parseInt((c.frameColor||'#e0701c').slice(1),16),{metalness:.6}),h=new Set(c.cells);
 c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
 for(const s of[-1,1])B(g,CS,CS,.1,wx,wy,s*(W/2+.07),fm);
 if(!h.has(x+','+(y+1)))B(g,CS,.09,W+.14,wx,wy+CS/2,0,fm);
 if(!h.has((x+1)+','+y))B(g,.09,CS,W+.14,wx+CS/2,wy,0,fm)});
+const bagGroup=new THREE.Group(),bagMat=M(0xffb34f,{roughness:.65,metalness:0});
+for(const xx of[-1,1])for(const zz of[-1,1]){const bag=new THREE.Mesh(new THREE.SphereGeometry(1,12,10),bagMat);bag.scale.set(.62,.55,.42);bag.position.set(xx*L*.31,.86,zz*(W*.5+.28));bagGroup.add(bag)}
+bagGroup.visible=false;g.add(bagGroup);g.userData.airbags=bagGroup;
 g.rotation.order='YXZ';return g}
+// Civilian sedans, minivans and pickups cruise on the roads and can be rolled by strong tornado winds.
+const traffic=[];
+function makeCivilian(i){
+  const g=new THREE.Group(),types=[{l:4.45,w:1.78,h:1.42},{l:4.9,w:1.9,h:1.8},{l:5.2,w:2.0,h:1.9}],v=types[Math.floor(Math.random()*types.length)];
+  const colors=[0xd9d9d4,0x24569b,0x8b2224,0x292d31,0xe2d5b7,0x5a6870,0xffffff],body=M(colors[Math.floor(Math.random()*colors.length)],{roughness:.6,metalness:.18}),glass=M(0x1a242b,{roughness:.2,metalness:.25}),rubber=M(0x101214,{roughness:.95,metalness:0}),lamp=M(0xfff2c3,{emissive:0x665522});
+  B(g,v.l,.46,v.w,0,.57,0,body);B(g,v.l*.48,.48,v.w*.82,-v.l*.06,.98,0,body);B(g,v.l*.43,.31,v.w*.84,-v.l*.06,1.04,0,glass);
+  B(g,.08,.15,v.w*.7,v.l/2,.63,0,lamp);
+  const wheelGeo=new THREE.CylinderGeometry(.28,.28,.2,10);wheelGeo.rotateX(Math.PI/2);
+  for(const x of[-v.l*.32,v.l*.32])for(const z of[-v.w*.52,v.w*.52]){const wheel=new THREE.Mesh(wheelGeo,rubber);wheel.position.set(x,.3,z);g.add(wheel)}
+  const axis=Math.random()<.5?'x':'z',lane=(Math.floor(Math.random()*9)-4)*500+(Math.random()<.5?-2.3:2.3),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
+  const x=axis==='x'?along:lane,z=axis==='x'?lane:along,yaw=axis==='x'?(dir>0?0:Math.PI):(dir>0?-Math.PI/2:Math.PI/2);
+  g.position.set(x,0,z);g.rotation.y=yaw;sc.add(g);
+  traffic.push({g,x,z,startX:x,startZ:z,axis,lane,dir,speed:5+Math.random()*7,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0});
+}
+for(let i=0;i<24;i++)makeCivilian(i);
+function resetTraffic(){for(const v of traffic){v.x=v.startX;v.z=v.startZ;v.rolled=false;v.roll=0;v.vx=v.vz=0;v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0)}}
+function updateTraffic(dt){for(const v of traffic){
+  if(Mi.on&&T){const w=wind(v.x,v.z),windMph=Math.hypot(w.x,w.z)*2.237;
+    if(!v.rolled&&windMph>=81&&w.r<T.R*2.3){v.rolled=true;v.roll=0;if(Mi.rollovers!==undefined)Mi.rollovers++;msg('Civilian traffic rolling over in '+Math.round(windMph)+' mph winds!')}
+    if(v.rolled){v.vx+=w.x*.055*dt;v.vz+=w.z*.055*dt;v.x+=v.vx*dt;v.z+=v.vz*dt;v.roll=Math.min(Math.PI/2,v.roll+dt*(windMph>110?2.8:1.9));v.g.rotation.x=v.roll*(w.x>=0?1:-1);v.g.rotation.y=v.startYaw;v.g.position.set(v.x,.02,v.z);continue}
+  }
+  v.x+=v.axis==='x'?v.dir*v.speed*dt:0;v.z+=v.axis==='z'?v.dir*v.speed*dt:0;
+  const along=v.axis==='x'?v.x:v.z;if(along>2200){if(v.axis==='x')v.x=-2200;else v.z=-2200;}
+  if(along< -2200){if(v.axis==='x')v.x=2200;else v.z=2200}
+  v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0);
+}}
 // aerodynamics model inputs from build
 function stats(k,c){const v=V[k],s=new Set(c.cells),h=(x,y)=>s.has(x+','+y),[a,b]=v.cab.map(f=>f*v.L);let nb=0,nr=0,out=0,cab=0,mt=0;
 c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
@@ -107,7 +150,7 @@ function draw(){const v=V[S.sel],c=cfgOf(S.sel),[a,b]=v.cab.map(f=>f*v.L),X=x=>(
 fx.clearRect(0,0,fc.width,fc.height);fx.fillStyle='#35546a';fx.fillRect(X(-v.L/2),Y(1.03),v.L/CS*PX,.62/CS*PX);fx.fillStyle='#4a7188';fx.fillRect(X(a),Y(v.H),(b-a)/CS*PX,(v.H-1.03)/CS*PX);
 fx.fillStyle='#111';for(const x of[v.wb/2+.2,-v.wb/2-(v.t?.3:.2)]){fx.beginPath();fx.arc(X(x),Y(.42),.42/CS*PX,0,7);fx.fill()}
 fx.strokeStyle='#ffffff14';for(let i=0;i<=CO;i++){fx.beginPath();fx.moveTo(i*PX,0);fx.lineTo(i*PX,fc.height);fx.stroke()}for(let i=0;i<=RO;i++){fx.beginPath();fx.moveTo(0,i*PX);fx.lineTo(fc.width,i*PX);fx.stroke()}
-fx.fillStyle='#ff7a2fcc';c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number);fx.fillRect(x*PX+1,(RO-1-y)*PX+1,PX-2,PX-2)})}
+fx.fillStyle=(c.frameColor||'#e0701c')+'cc';c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number);fx.fillRect(x*PX+1,(RO-1-y)*PX+1,PX-2,PX-2)})}
 let pm=null;const cellAt=e=>{const r=fc.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*CO),RO-1-Math.floor((e.clientY-r.top)/r.height*RO)]};
 function paint(e){const[x,y]=cellAt(e);if(x<0||x>=CO||y<0||y>=RO)return;const c=cfgOf(S.sel),k=x+','+y,i=c.cells.indexOf(k);
 if(pm&&i<0){if(S.cr<15)return msg('Not enough credits: 15 per frame block');c.cells.push(k);S.cr-=15}else if(!pm&&i>=0){c.cells.splice(i,1);S.cr+=15}else return;draw();rebuild();ui()}
@@ -120,14 +163,25 @@ if(n==3)for(let r=0;r<4;r++)add(e,r);
 const d=(s.size-cf.cells.length)*15;if(d>S.cr)return msg('Not enough credits');S.cr-=d;cf.cells=[...s];draw();rebuild();ui()}
 function setO(key,n,arr){const c=cfgOf(S.sel),d=arr[n]-arr[c[key]];if(d>S.cr)return msg('Not enough credits');S.cr-=d;c[key]=n;rebuild();ui()}
 function buy(k){if(S.own[k])S.sel=k;else if(S.cr>=V[k].p){S.cr-=V[k].p;S.own[k]=1;S.sel=k}else return msg('Need '+V[k].p+' credits');draw();rebuild();ui()}
+function buyAirbag(){const c=cfgOf(S.sel);if(c.airbags)return msg('Airbags already fitted to this vehicle');if(S.cr<1200)return msg('Need 1,200 credits for airbags');S.cr-=1200;c.airbags=1;save();ui();msg('Airbag kit installed. Press Y during an intercept to deploy it.')}
+function buyProbe(){const c=cfgOf(S.sel);if(S.cr<850)return msg('Need 850 credits for a probe');S.cr-=850;c.probes=(c.probes||0)+1;save();ui();msg('Probe purchased. Exit the vehicle and press F to deploy it.')}
+function setFrameColor(color){cfgOf(S.sel).frameColor=color;draw();rebuild();ui();save()}
 function ui(){const c=cfgOf(S.sel),st=stats(S.sel,c),v=V[S.sel];$('#cr').innerHTML='Credits: <b style="color:var(--ok)">'+S.cr.toLocaleString()+'</b>';
 $('#veh').innerHTML=Object.keys(V).map(k=>`<button class="${k==S.sel?'on':''}" onclick="buy('${k}')">${V[k].n} ${S.own[k]?'':'('+V[k].p+')'}</button>`).join('');
 const row=(t,arr,key,f)=>`<div>${t}: `+arr.map((p,i)=>`<button class="${c[key]==i?'on':''}" onclick="setO('${key}',${i},${f})">${i?(key=='armor'?'L'+i:key=='spk'?(i*4)+' spikes':'Fit'):'None'}${i&&p!=arr[c[key]]?' '+(p-arr[c[key]]>0?'+':'')+(p-arr[c[key]]):''}</button>`).join('')+'</div>';
 $('#opt').innerHTML=row('Armor',ARM,'armor','ARM')+row('Hail guard',HG,'hg','HG')+row('Anchor spikes',SPK,'spk','SPK');
+$('#shop').innerHTML=`<div><button onclick="buyAirbag()">${c.airbags?'Airbags fitted':'Buy airbags (1,200)'}</button></div><div><button onclick="buyProbe()">Buy probe (850)</button> <span style="color:var(--mu)">Owned: ${c.probes||0}</span></div>`;
+$('#frameColor').value=c.frameColor||'#e0701c';
 const[sl,ro]=lim(st,v,0),[sh]=lim(st,v,st.hold),mp=x=>Math.round(x*2.237),R=(a,b)=>`<div class="st"><span>${a}</span><b>${b}</b></div>`;
 $('#stat').innerHTML=R('Curb weight → loaded',Math.round(v.m)+' → '+Math.round(st.m)+' kg')+R('Drag Cd (front / broadside)',st.cdf.toFixed(3)+' / '+st.cds.toFixed(2))+R('Frontal / side area',st.af.toFixed(1)+' / '+st.as.toFixed(1)+' m²')+
-R('Frame blocks',st.n+' ('+st.n*14+' kg)')+R('Debris shielding',Math.round((1-st.pm)*200)+'% of max')+R('Slides broadside at',mp(sl)+' mph')+(st.hold?R('With spikes anchored',mp(sh)+' mph'):'')+R('Rolls over at',mp(ro)+' mph');save()}
+R('Frame blocks',st.n+' ('+st.n*14+' kg)')+R('Frame color',c.frameColor||'#e0701c')+R('Airbags',c.airbags?'Fitted':'Not fitted')+R('Probes',c.probes||0)+R('Debris shielding',Math.round((1-st.pm)*200)+'% of max')+R('Slides broadside at',mp(sl)+' mph')+(st.hold?R('With spikes anchored',mp(sh)+' mph'):'')+R('Rolls over at',mp(ro)+' mph');save()}
 window.ARM=ARM;window.HG=HG;window.SPK=SPK;
+function makeProbe(x,z){const g=new THREE.Group(),metal=M(0xb9c5cc,{metalness:.75,roughness:.35}),bright=M(0xf28b33,{metalness:.25,roughness:.5}),dark=M(0x26343a,{metalness:.25});
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.12,10),dark);base.position.y=.08;g.add(base);
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.85,8),metal);mast.position.y=.53;g.add(mast);
+  B(g,.34,.22,.3,0,.87,0,bright);B(g,.42,.045,.04,0,1.02,0,metal);
+  const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.42,6),metal);antenna.position.set(.12,1.18,0);g.add(antenna);
+  g.position.set(x,0,z);sc.add(g);return g}
 // ---------- tornado ----------
 const fun=new THREE.Mesh(new THREE.CylinderGeometry(1,.3,1,24,1,true),new THREE.MeshBasicMaterial({color:0x7d8790,transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));
 const NP=2600,pa=new Float32Array(NP*3),pg=new Float32Array(NP),ph=new Float32Array(NP),pk=new Float32Array(NP);
@@ -142,42 +196,54 @@ return{x:-dz/r*vt+dx/r*vr+T.vx,z:dx/r*vt+dz/r*vr+T.vz,w:T.v*.55*Math.exp(-1.2*(r
 function go(){const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<25?0:q<55?1:q<77?2:q<91?3:q<98?4:5,rg=[[29,38],[39,49],[50,60],[61,74],[75,89],[90,105]][e],
 an=Math.random()*6.28,d=380+Math.random()*120;
 T={x:Math.cos(an)*d,z:Math.sin(an)*d,R:50+Math.random()*90+e*8,v:rg[0]+Math.random()*(rg[1]-rg[0]),ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:6+Math.random()*8,hail:Math.random()<.6?Math.random():0};
-Mi={on:1,t:0,data:0,hp:100,st,k,car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:0,y:0,anch:0,torn:0}};
+Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,probesLeft:c.probes||0,probes:[],car:{x:0,z:0,a:Math.atan2(-T.z,T.x),s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0,kitUsed:0}};
 sc.remove(car);car=mk(k,c,false);sc.add(car);fun.visible=pt.visible=true;hail.visible=T.hail>0;hail.material.opacity=.3+T.hail*.6;
 $('#pn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;msg('EF'+e+' tornado inbound. Intercept it!')}
 function sp(d){car.userData.sp.children.forEach(s=>s.position.y=d?.4:.95)}
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;
-if(k==' '&&Mi.on){e.preventDefault();const c=Mi.car;if(!cfgOf(Mi.k).spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');
-if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.s=0;sp(1);msg('Spikes anchored')}else msg('Slow down to anchor')}});
+function deployKit(){const cf=cfgOf(Mi.k),c=Mi.car;if(Mi.exit)return msg('Get back in the vehicle to deploy its equipment');if(c.kitUsed)return msg('Deployment kit already used this intercept');if(!cf.airbags&&!cf.spk)return msg('Buy airbags or anchor spikes first');c.kitUsed=1;if(cf.airbags){c.airDeploy=1;if(car.userData.airbags)car.userData.airbags.visible=true}if(cf.spk){c.spikeDeploy=1;sp(1);if(Math.abs(c.s)<4&&!c.torn){c.anch=1;c.s=0;msg(cf.airbags?'Airbags deployed; spikes anchored':'Spikes deployed and anchored')}else msg(cf.airbags?'Airbags deployed; slow down to anchor spikes':'Spikes deployed; slow down to anchor them')}else msg('Airbags deployed')}
+function exitVehicle(){const c=Mi.car;if(!Mi.exit){Mi.exit=true;Mi.player={x:c.x+Math.sin(c.a)*(V[Mi.k].W/2+.9),z:c.z+Math.cos(c.a)*(V[Mi.k].W/2+.9),yaw:c.a};msg('On foot: click the world to look around; F deploys a probe')}else{const d=Math.hypot(Mi.player.x-c.x,Mi.player.z-c.z);if(d>7)return msg('Move closer to the vehicle to re-enter (E)');Mi.exit=false;if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();msg('Back in the driver seat')}}
+function deployProbe(){if(!Mi.exit)return msg('Press E to exit the car before deploying a probe');if(Mi.probesLeft<=0)return msg('No probes available. Buy one in the garage.');const p=Mi.player,mesh=makeProbe(p.x,p.z);Mi.probes.push({x:p.x,z:p.z,mesh});Mi.probesLeft--;msg('Probe deployed. It will send tornado data while in range.')}
+$('#c').addEventListener('click',()=>{if(Mi.on&&Mi.exit&&$('#c').requestPointerLock)$('#c').requestPointerLock()});
+document.addEventListener('mousemove',e=>{if(Mi.on&&Mi.exit&&document.pointerLockElement===$('#c')&&Mi.player)Mi.player.yaw-=e.movementX*.002});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(!Mi.on)return;if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
+if(k==' '){e.preventDefault();const c=Mi.car,cf=cfgOf(Mi.k);if(Mi.exit)return;if(!cf.spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.spikeDeploy=1;c.s=0;sp(1);msg('Spikes anchored')}else{c.spikeDeploy=1;sp(1);msg('Spikes down; slow to anchor')}}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
-function mission(dt){const c=Mi.car,st=Mi.st,v0=V[Mi.k],cf=cfgOf(Mi.k),arm=1/(1+.7*cf.armor);Mi.t+=dt;
-T.a+=(Math.random()-.5)*.25*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;
-fun.position.set(T.x,160,T.z);fun.scale.set(T.R*1.45,320,T.R*1.45);
-for(let i=0;i<NP;i++){const h=ph[i],r=T.R*(.35+1.1*Math.pow(h,1.6))*pk[i];pg[i]+=dt*T.v*.6/Math.max(r,15);pa[i*3]=T.x+Math.cos(pg[i])*r;pa[i*3+1]=h*320;pa[i*3+2]=T.z+Math.sin(pg[i])*r}pt.geometry.attributes.position.needsUpdate=true;
-if(!c.anch){const th=(keys.w?1:0)-(keys.s?1:0);c.s+=th*Math.min(7,26e4/(st.m*Math.max(Math.abs(c.s),4)))*dt;if(!th)c.s*=Math.exp(-.4*dt);c.s=cl(c.s,-10,34);c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/8)*Math.sign(c.s||1)*.9}
-const w=wind(c.x,c.z),fx=Math.cos(c.a),fz=-Math.sin(c.a),vx=fx*c.s+c.vx,vz=fz*c.s+c.vz,rx=w.x-vx,rz=w.z-vz,v=Math.hypot(rx,rz)+.001,al=Math.abs((rx*fx+rz*fz)/v),be=Math.sqrt(1-al*al),
-F=.5*RHO*(st.cdf*al+st.cds*be)*(st.af*al+st.as*be)*v*v,Fx=F*rx/v,Fz=F*rz/v,Ap=v0.L*v0.W,lift=.5*RHO*Ap*((.25+.1*v0.t)*v*v+.8*w.w*w.w),N=Math.max(0,st.m*G-lift),
-Fc=.7*N+(c.anch?st.hold:0),ws=Math.hypot(w.x,w.z);
-if(F>Fc){if(c.anch){c.anch=0;c.torn=1;sp(0);msg('Anchor spikes torn out!')}const ex=(F-.7*N)/st.m*dt*(c.anch?0:1);c.vx+=ex*rx/v;c.vz+=ex*rz/v}else{c.vx*=Math.exp(-2*dt);c.vz*=Math.exp(-2*dt)}
-const ro=F*.55*v0.H/(N*v0.W*.5+1),lofted=lift>st.m*G*.95;c.tilt=cl(ro-.6,0,1)*.9*Math.sign(-(Fx*fz-Fz*fx)||1);
-let dmg=0;if(ro>1.1)dmg+=25*dt;if(lofted){dmg+=35*dt;c.y+=12*dt}else c.y=Math.max(0,c.y-20*dt);
-if(ws>20&&Math.random()<.12*(ws/30)**2*dt)dmg+=(4+ws*.2)*arm*st.pm;
-if(T.hail&&w.r<3*T.R)dmg+=T.hail*4*(cf.hg?.07:1)*arm*dt;
-Mi.hp-=dmg;if(w.r<1.6*T.R)Mi.data+=(ws/10)**2*dt*1.5*(1+T.ef*.1);
-c.x+=(fx*c.s+c.vx)*dt;c.z+=(fz*c.s+c.vz)*dt;
-car.position.set(c.x,c.y,c.z);car.rotation.y=c.a;car.rotation.x=c.tilt||0;
-cam.position.set(c.x-fx*14,c.y+6,c.z-fz*14);cam.position.x+=(Math.random()-.5)*ws*.004;cam.lookAt(c.x+fx*12,c.y+2,c.z+fz*12);
-const ha_=hail.geometry.attributes.position;for(let i=0;i<HN;i++){ha[i*3+1]-=28*dt;if(ha[i*3+1]<0)ha[i*3+1]=40}hail.position.set(c.x,0,c.z);ha_.needsUpdate=true;
-const dx=T.x-c.x,dz=T.z-c.z;$('#ar').style.transform='rotate('+Math.atan2(-(dx*fz-dz*fx)*-1*-1,dx*fx+dz*fz)*57.3+'deg)';
-$('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(w.r)} m away<br>Wind ${Math.round(ws*2.237)} mph · You ${Math.round(Math.abs(c.s)*2.237)} mph${c.anch?' · <b style="color:var(--ac)">ANCHORED</b>':''}<div id="bar"><i style="width:${Math.max(0,Mi.hp)}%"></i></div>Data: <b>${Math.round(Mi.data)}</b> · Time left: ${Math.max(0,Math.ceil(110-Mi.t))}s${T.hail&&w.r<3*T.R?'<br>Hail: '+Math.round(T.hail*100)+'%'+(cf.hg?' (guarded)':' (exposed!)'):''}${lofted?'<br><b style="color:var(--bd)">LOFTED</b>':ro>1.1?'<br><b style="color:var(--bd)">ROLLING</b>':''}`;
-if(Mi.hp<=0||Mi.t>110)finish()}
-function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
+function mission(dt){
+ const c=Mi.car,st=Mi.st,v0=V[Mi.k],cf=cfgOf(Mi.k),arm=1/(1+.7*cf.armor)*(c.airDeploy?.58:1);Mi.t+=dt;
+ T.a+=(Math.random()-.5)*.25*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;
+ fun.position.set(T.x,160,T.z);fun.scale.set(T.R*1.45,320,T.R*1.45);
+ for(let i=0;i<NP;i++){const h=ph[i],r=T.R*(.35+1.1*Math.pow(h,1.6))*pk[i];pg[i]+=dt*T.v*.6/Math.max(r,15);pa[i*3]=T.x+Math.cos(pg[i])*r;pa[i*3+1]=h*320;pa[i*3+2]=T.z+Math.sin(pg[i])*r}pt.geometry.attributes.position.needsUpdate=true;
+ if(!Mi.exit&&!c.anch){const th=(keys.w?1:0)-(keys.s?1:0);c.s+=th*Math.min(7,26e4/(st.m*Math.max(Math.abs(c.s),4)))*dt;if(!th)c.s*=Math.exp(-.4*dt);c.s=cl(c.s,-10,34);c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/8)*Math.sign(c.s||1)*.9}
+ const wCar=wind(c.x,c.z),fx=Math.cos(c.a),fz=-Math.sin(c.a),vx=fx*c.s+c.vx,vz=fz*c.s+c.vz,rx=wCar.x-vx,rz=wCar.z-vz,v=Math.hypot(rx,rz)+.001,al=Math.abs((rx*fx+rz*fz)/v),be=Math.sqrt(1-al*al),
+ F=.5*RHO*(st.cdf*al+st.cds*be)*(st.af*al+st.as*be)*v*v,Fx=F*rx/v,Fz=F*rz/v,Ap=v0.L*v0.W,lift=.5*RHO*Ap*((.25+.1*v0.t)*v*v+.8*wCar.w*wCar.w),N=Math.max(0,st.m*G-lift),Fc=.7*N+(c.anch?st.hold:0),wsCar=Math.hypot(wCar.x,wCar.z);
+ if(F>Fc){if(c.anch){c.anch=0;c.torn=1;sp(0);msg('Anchor spikes torn out!')}const ex=(F-.7*N)/st.m*dt;c.vx+=ex*rx/v;c.vz+=ex*rz/v}else{c.vx*=Math.exp(-2*dt);c.vz*=Math.exp(-2*dt)}
+ const ro=F*.55*v0.H/(N*v0.W*.5+1)*(c.airDeploy?.72:1),lofted=lift>st.m*G*.95;
+ c.tilt=cl(ro-.6,0,1)*.9*Math.sign(-(Fx*fz-Fz*fx)||1);let dmg=0;if(ro>1.1)dmg+=25*dt*(c.airDeploy?.5:1);if(lofted){dmg+=35*dt*(c.airDeploy?.7:1);c.y+=12*dt}else c.y=Math.max(0,c.y-20*dt);
+ if(wsCar>20&&Math.random()<.12*(wsCar/30)**2*dt)dmg+=(4+wsCar*.2)*arm*st.pm;
+ if(T.hail&&wCar.r<3*T.R)dmg+=T.hail*4*(cf.hg?.07:1)*arm*dt;
+ Mi.hp-=dmg;c.x+=(fx*c.s+c.vx)*dt;c.z+=(fz*c.s+c.vz)*dt;
+ car.position.set(c.x,c.y,c.z);car.rotation.y=c.a;car.rotation.x=c.tilt||0;
+ let wx=wCar.x,wz=wCar.z,windRange=wCar.r;
+ if(Mi.exit&&Mi.player){const p=Mi.player,fwX=Math.cos(p.yaw),fwZ=-Math.sin(p.yaw),rightX=Math.sin(p.yaw),rightZ=Math.cos(p.yaw),fwd=(keys.w?1:0)-(keys.s?1:0),side=(keys.d?1:0)-(keys.a?1:0),pw=wind(p.x,p.z);p.x+=(fwX*fwd+rightX*side)*4.2*dt+pw.x*.018*dt;p.z+=(fwZ*fwd+rightZ*side)*4.2*dt+pw.z*.018*dt;wx=pw.x;wz=pw.z;windRange=pw.r;cam.position.set(p.x,1.65,p.z);cam.lookAt(p.x+fwX,1.65,p.z+fwZ)}
+ else{cam.position.set(c.x-fx*14,c.y+6,c.z-fz*14);cam.position.x+=(Math.random()-.5)*wsCar*.004;cam.lookAt(c.x+fx*12,c.y+2,c.z+fz*12)}
+ const ha_=hail.geometry.attributes.position;for(let i=0;i<HN;i++){ha[i*3+1]-=28*dt;if(ha[i*3+1]<0)ha[i*3+1]=40}hail.position.set(c.x,0,c.z);ha_.needsUpdate=true;
+ const dataW=windRange,ws=Math.hypot(wx,wz),depthBoost=dataW<T.R?4:dataW<T.R*1.25?2:1;
+ if(dataW<1.6*T.R)Mi.data+=(ws/10)**2*dt*1.5*(1+T.ef*.1)*depthBoost;
+ // Deployed probes report independently, so they can keep collecting readings while the player is away from the car.
+ for(const probe of Mi.probes){const pw=wind(probe.x,probe.z),pws=Math.hypot(pw.x,pw.z);if(pw.r<1.8*T.R)Mi.data+=(pws/10)**2*dt*(1.1+T.ef*.16)*(pw.r<T.R?2.5:1)}
+ updateTraffic(dt);
+ const haDist=windRange,windMph=Math.round(ws*2.237),dx=T.x-(Mi.exit&&Mi.player?Mi.player.x:c.x),dz=T.z-(Mi.exit&&Mi.player?Mi.player.z:c.z),fxNow=Mi.exit&&Mi.player?Math.cos(Mi.player.yaw):fx,fzNow=Mi.exit&&Mi.player?-Math.sin(Mi.player.yaw):fz;
+ $('#ar').style.transform='rotate('+Math.atan2(-(dx*fzNow-dz*fxNow)*-1*-1,dx*fxNow+dz*fzNow)*57.3+'deg)';
+ $('#hud').innerHTML=`<b>EF${T.ef}</b> tornado, ${Math.round(dataW)} m away<br>Wind ${windMph} mph · ${Mi.exit?'ON FOOT':'You '+Math.round(Math.abs(c.s)*2.237)+' mph'}${c.anch?' · <b style="color:var(--ac)">ANCHORED</b>':''}${c.airDeploy?' · <b style="color:#ffb34f">AIRBAGS DEPLOYED</b>':''}<div id="bar"><i style="width:${Math.max(0,Mi.hp)}%"></i></div>Data: <b>${Math.round(Mi.data)}</b> · Probes left: ${Mi.probesLeft}<br>Traffic rollovers: ${Mi.rollovers} · Time left: ${Math.max(0,Math.ceil(110-Mi.t))}s${T.hail&&dataW<3*T.R?'<br>Hail: '+Math.round(T.hail*100)+'%'+(cf.hg?' (guarded)':' (exposed!)'):''}${Mi.exit?'<br><b>WASD walk · Mouse look · F probe · E re-enter</b>':''}${lofted?'<br><b style="color:var(--bd)">LOFTED</b>':ro>1.1?'<br><b style="color:var(--bd)">ROLLING</b>':''}`;
+ if(Mi.hp<=0||Mi.t>110)finish()
+}
+function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;cfgOf(Mi.k).probes=Mi.probesLeft;if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
 $('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
 function leave(){const pay=Math.round(Mi.data);Mi.on=0;S.cr+=pay;save();back();msg('Left the field. Banked '+pay+' credits')}
-function back(){$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
+function back(){if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft;save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=true;$('#pn').hidden=false;fun.visible=pt.visible=hail.visible=false;rebuild();car.position.set(0,0,0);ui()}
 function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
 let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;
-if(Mi.on)mission(dt);else{gt+=dt*.4;cam.position.set(Math.cos(gt)*10,3.8,Math.sin(gt)*10);cam.lookAt(0,1,0)}
+if(Mi.on)mission(dt);else{updateTraffic(dt);gt+=dt*.4;cam.position.set(Math.cos(gt)*10,3.8,Math.sin(gt)*10);cam.lookAt(0,1,0)}
 R.render(sc,cam)})(0);
 rebuild();draw();ui();
 </script></body></html>
