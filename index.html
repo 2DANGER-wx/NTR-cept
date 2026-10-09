@@ -60,26 +60,82 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 @media(max-width:700px){#radarWrap{top:92px;width:132px;height:155px;left:6px}#radar{height:121px}#warningBanner{top:8px;max-width:calc(100vw - 150px);font-size:10px}#garageBtn{left:6px;top:6px}#alarmToggle{left:6px;top:43px}#freeHud{left:6px;bottom:8px}#garageDoorLabel{display:none}}
 [hidden]{display:none!important}
 @media(max-width:700px){#pn{top:auto;height:56%;border-left:0;border-top:2px solid var(--ac)}}
+
+/* NTR-CEPT UI layout repair: all panels stay inside the viewport. */
+*,*::before,*::after{box-sizing:border-box}
+#pn{z-index:25;position:fixed;right:12px;top:60px;bottom:12px;width:min(430px,calc(100vw - 24px));max-height:calc(100dvh - 72px);overflow:auto;overscroll-behavior:contain;padding:14px 14px 78px;background:rgba(17,35,45,.97);border:1px solid #547180;border-left:3px solid var(--ac);border-radius:9px;box-shadow:0 10px 32px #0008}
+#pn h1{font-size:25px;line-height:1.1;margin-bottom:7px}
+#pn h2{margin:16px 0 7px;padding-bottom:4px;border-bottom:1px solid #334e5b;line-height:1.25}
+#pn button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#veh{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+#veh button{margin:0;min-height:34px;font-size:11px}
+#opt,#shop{display:flex;flex-direction:column;gap:6px;min-width:0}
+#opt>div,#shop>div{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+#stat .st{gap:10px;align-items:flex-start}
+#stat .st span{min-width:0;overflow-wrap:anywhere}
+#stat .st b{text-align:right;overflow-wrap:anywhere}
+#frameControls{min-width:0}
+#frameControls label,#wrapControls label{margin-top:8px}
+#frameControls input[type=range]{display:block;width:100%;min-width:0;margin:5px 0}
+#mapToggle{z-index:15;top:12px;right:12px;max-width:calc(100vw - 24px)}
+#worldMapWrap{z-index:14;top:54px;right:12px;width:min(430px,calc(100vw - 24px));height:min(330px,calc(100dvh - 80px));max-height:calc(100dvh - 80px)}
+#worldMapWrap.expanded{left:12px;right:12px;top:54px;width:auto;height:calc(100dvh - 70px);max-height:none}
+#radarWrap{z-index:9;top:82px;left:12px;width:180px;height:205px}
+#radar{height:168px}
+#hud{z-index:8;top:auto;bottom:12px;left:12px;width:min(355px,calc(100vw - 24px));max-height:44dvh;overflow:auto;min-width:0}
+#freeHud{z-index:8;left:12px;bottom:12px;width:min(270px,calc(100vw - 24px));min-width:0}
+#warningBanner{z-index:16;top:12px;left:50%;width:max-content;max-width:calc(100vw - 300px);overflow-wrap:anywhere}
+#garageBtn{z-index:16;top:12px;left:12px}
+#alarmToggle{z-index:16;top:52px;left:12px}
+#garageDoorLabel{z-index:5;max-width:calc(100vw - 24px)}
+#msg{z-index:50;max-width:calc(100vw - 24px);text-align:center}
+#res{z-index:40;padding:18px}
+#res>div{max-width:min(620px,100%);max-height:90dvh;overflow:auto}
+#uiToggle{position:fixed;z-index:9999;right:12px;bottom:12px;top:auto;left:auto;background:#ff7a2f;color:#17100b;border:2px solid #ffe0cb;border-radius:6px;padding:10px 13px;font-weight:900;letter-spacing:.5px;box-shadow:0 4px 18px #000b;cursor:pointer}
+body.ui-hidden .ui-layer{display:none!important}
+@media(max-width:700px){
+ #pn{right:0;bottom:0;top:auto;width:100vw;height:min(62dvh,620px);max-height:72dvh;border-radius:12px 12px 0 0;border-left:0;border-top:3px solid var(--ac);padding:12px 12px calc(64px + env(safe-area-inset-bottom,0px))}
+ #veh{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #radarWrap{left:6px;top:84px;width:136px;height:160px;padding:5px}
+ #radar{height:121px}
+ #mapToggle{right:6px;top:6px}
+ #worldMapWrap{left:auto;right:6px;top:44px;width:min(94vw,430px);height:235px}
+ #worldMapWrap.expanded{left:6px;right:6px;top:44px;width:auto;height:calc(100dvh - 52px)}
+ #warningBanner{top:50px;max-width:calc(100vw - 150px);font-size:10px;padding:6px 8px;letter-spacing:.2px}
+ #garageBtn{left:6px;top:6px;font-size:10px;padding:6px}
+ #alarmToggle{left:6px;top:42px;font-size:10px;padding:5px}
+ #hud{left:6px;bottom:6px;width:min(300px,calc(100vw - 12px));max-height:35dvh;padding:8px;font-size:11px}
+ #freeHud{left:6px;bottom:6px;width:min(260px,calc(100vw - 12px));font-size:11px}
+ #garageDoorLabel{display:none}
+ #uiToggle{right:8px;bottom:8px;padding:8px 10px;font-size:11px}
+ #res>div{padding:18px}
+}
+
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="hud" hidden></div><div id="ar" hidden>▲</div><div id="msg"></div>
-<div id="intro"><div class="introCard"><h1>NTR-CEPT</h1><p><b>Storm interception simulator</b><br>Start in your town garage, build a protective frame, fit armor and windshield upgrades, fuel up, then head out when rotation develops.</p><p class="subnote">W/S drive · A/D steer · V first-person view · G garage · M map · R refuel at a station · E exit/re-enter during an intercept · Y deploy/retract equipment</p><button id="playBtn" onclick="playGame()">PLAY</button></div></div>
-<button id="garageBtn" hidden onclick="toggleGarage()">GARAGE WORKBENCH [G]</button>
-<button id="alarmToggle" hidden onclick="toggleSiren()">SIRENS: ON</button>
-<div id="warningBanner" hidden>SEVERE THUNDERSTORM WATCH</div>
-<div id="radarWrap" hidden><div id="radarHead"><span>STORM RADAR</span><span id="radarMode">STANDBY</span></div><canvas id="radar" width="360" height="360"></canvas><div id="radarInfo">Regional scan · waiting for storm data</div></div>
-<div id="freeHud" hidden></div>
-<div id="garageDoorLabel" hidden>HOME GARAGE · SILVER CREEK</div>
-<button id="mapToggle" hidden onclick="toggleMap()">WORLD MAP [M]</button>
-<div id="worldMapWrap" hidden>
+<button id="uiToggle" hidden onclick="toggleAllUI()" aria-label="Hide or show all game interface">HIDE UI [H]</button>
+<div id="hud" class="ui-layer" hidden></div><div id="ar" class="ui-layer" hidden>▲</div><div id="msg" class="ui-layer"></div>
+<div id="intro" class="ui-layer"><div class="introCard"><h1>NTR-CEPT</h1><p><b>Storm interception simulator</b><br>Start in your town garage, build a protective frame, fit armor and windshield upgrades, fuel up, then head out when rotation develops.</p><p class="subnote">W/S drive · A/D steer · V first-person view · G garage · M map · R refuel at a station · E exit/re-enter during an intercept · Y deploy/retract equipment</p><button id="playBtn" onclick="playGame()">PLAY</button></div></div>
+<button id="garageBtn" class="ui-layer" hidden onclick="toggleGarage()">GARAGE WORKBENCH [G]</button>
+<button id="alarmToggle" class="ui-layer" hidden onclick="toggleSiren()">SIRENS: ON</button>
+<div id="warningBanner" class="ui-layer" hidden>SEVERE THUNDERSTORM WATCH</div>
+<div id="radarWrap" class="ui-layer" hidden><div id="radarHead"><span>STORM RADAR</span><span id="radarMode">STANDBY</span></div><canvas id="radar" width="360" height="360"></canvas><div id="radarInfo">Regional scan · waiting for storm data</div></div>
+<div id="freeHud" class="ui-layer" hidden></div>
+<div id="garageDoorLabel" class="ui-layer" hidden>HOME GARAGE · SILVER CREEK</div>
+<button id="mapToggle" class="ui-layer" hidden onclick="toggleMap()">WORLD MAP [M]</button>
+<div id="worldMapWrap" class="ui-layer" hidden>
   <div id="mapHeader"><span>TACTICAL WORLD MAP · TOWNS & ROADS</span><span id="mapStatus">Awaiting intercept</span><button style="font-size:10px;padding:3px 6px" onclick="expandMap()">EXPAND</button></div>
   <canvas id="worldMap" width="900" height="620" aria-label="World map showing roads, towns, player, probes, and tornado"></canvas>
   <div id="mapLegend"><span>● Tornado</span><span>▲ Interceptor</span><span>■ Probe</span><span>○ Town</span><span>━ Road</span><span>✚ Gas</span></div>
 </div>
-<div id="pn"><h1>NTR-CEPT</h1><div id="cr"></div>
+<div id="pn" class="ui-layer"><h1>NTR-CEPT</h1><div id="cr"></div>
 <h2>Garage</h2><div id="veh"></div>
-<h2>Protective cube frame</h2>
-<div id="frameControls"><div id="frameLevelLabel" class="subnote">No cube frame fitted. Buy one to surround the vehicle with adjustable tubing.</div><button onclick="buyFrameCube()">Buy / expand cube frame</button><label for="frameRotate">Rotate frame: <span id="frameRotateValue">0°</span></label><input id="frameRotate" type="range" min="-180" max="180" step="15" value="0" oninput="rotateFrame(this.value)"><div class="subnote">The cage expands around the vehicle. Armor is fitted separately below.</div></div>
+<h2>Editable cube frame</h2>
+<div id="frameControls"><div id="frameLevelLabel" class="subnote">Starter cube frame fitted. Stretch and rotate it directly.</div><button id="frameToggle" onclick="toggleFrame()">Remove cube frame</button>
+<label for="frameLength">Length stretch: <span id="frameLengthValue">100%</span></label><input id="frameLength" type="range" min="0.85" max="1.85" step="0.05" value="1" oninput="resizeFrame('frameLength',this.value)">
+<label for="frameWidth">Width stretch: <span id="frameWidthValue">100%</span></label><input id="frameWidth" type="range" min="0.85" max="1.85" step="0.05" value="1" oninput="resizeFrame('frameWidth',this.value)">
+<label for="frameHeight">Height stretch: <span id="frameHeightValue">100%</span></label><input id="frameHeight" type="range" min="0.85" max="1.85" step="0.05" value="1" oninput="resizeFrame('frameHeight',this.value)">
+<label for="frameRotate">Rotate frame: <span id="frameRotateValue">0°</span></label><input id="frameRotate" type="range" min="-180" max="180" step="5" value="0" oninput="rotateFrame(this.value)"><div class="subnote">The cube starts installed on your vehicle. Stretch its length, width and height with the sliders; armor is fitted separately below.</div></div>
 <canvas id="fr" hidden></canvas><div hidden><button onclick="pre(1)">Roll cage</button><button onclick="pre(2)">Plow wedge</button><button onclick="pre(3)">Fortress</button><button onclick="pre(0)">Clear</button></div>
 <h2>Armor, hail guard, anchor spikes</h2><div id="opt"></div>
 <h2>Equipment shop</h2><div id="shop"></div>
@@ -90,7 +146,7 @@ button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#1b1006
 <h2>Physics readout</h2><div id="stat"></div>
 <button id="go" onclick="go()">INTERCEPT</button>
 <p style="color:var(--mu);font-size:12px">Town driving: W/S throttle, A/D steer, V first-person dash camera, G close/open garage editor, M show/hide world map, R refuel at a gas station. Intercept: Y deploy/retract airbags and fitted spikes, Space anchors spikes, E exit/re-enter, click the world for mouse look, F deploy a purchased probe. A tornado develops over time rather than appearing immediately. Press ` (backtick) to end the intercept.</p><button onclick="toggleGarage()">CLOSE GARAGE / DRIVE [G]</button></div>
-<div id="res" hidden></div>
+<div id="res" class="ui-layer" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=s=>document.querySelector(s),CS=.35,CO=26,RO=10,PX=14,RHO=1.2,G=9.81,cl=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -107,7 +163,7 @@ const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900];
 let S={cr:3000,fuel:100,own:{tahoe:1},sel:'tahoe',cfg:{}};
 try{const j=localStorage.getItem('ntrcept');if(j)S=Object.assign(S,JSON.parse(j))}catch(e){}
 S.own=Object.assign({tahoe:1},S.own||{});S.cfg=S.cfg||{};S.fuel=Number.isFinite(S.fuel)?cl(S.fuel,0,100):100;
-const cfgOf=k=>{S.cfg[k]=Object.assign({cells:[],armor:0,hg:0,spk:0,airbags:0,probes:0,frameColor:'#e0701c',frameSize:0,frameRotation:0,wrapColor:'',wrapText:'',wrapImageData:'',windshieldTier:0,windshieldHits:0,windshieldBroken:false,chassisOnly:false},S.cfg[k]||{});return S.cfg[k]};
+const cfgOf=k=>{S.cfg[k]=Object.assign({cells:[],armor:0,hg:0,spk:0,airbags:0,probes:0,frameColor:'#e0701c',frameSize:0,frameEnabled:true,frameLength:1,frameWidth:1,frameHeight:1,frameRotation:0,wrapColor:'',wrapText:'',wrapImageData:'',windshieldTier:0,windshieldHits:0,windshieldBroken:false,chassisOnly:false},S.cfg[k]||{});return S.cfg[k]};
 const save=()=>{try{localStorage.setItem('ntrcept',JSON.stringify(S))}catch(e){}};
 function msg(t){const m=$('#msg');m.textContent=t;m.style.opacity=1;clearTimeout(msg.t);msg.t=setTimeout(()=>m.style.opacity=0,2200)}
 // ---------- three.js ----------
@@ -213,7 +269,7 @@ const crackGroup=new THREE.Group(),crackMat=new THREE.LineBasicMaterial({color:0
 for(let i=0;i<8;i++){const zz=(Math.random()-.5)*W*.68,yy=1.03+ch*.45+(Math.random()-.5)*ch*.25,pts=[new THREE.Vector3(b+.063,yy,zz),new THREE.Vector3(b+.063,yy-.16,zz+.09),new THREE.Vector3(b+.063,yy-.08,zz+.19),new THREE.Vector3(b+.063,yy-.25,zz+.27)];const geom=new THREE.BufferGeometry().setFromPoints(pts);crackGroup.add(new THREE.Line(geom,crackMat))}
 crackGroup.visible=false;shell.add(crackGroup);g.userData.cracks=crackGroup;g.userData.shell=shell;
 // A single tube-cube frame that can be expanded and rotated around the vehicle.
-if((c.frameSize||0)>0){const cage=new THREE.Group(),sz=c.frameSize,Lf=L*(1.06+.13*sz),Wf=W*(1.18+.14*sz),Hf=H*(1.08+.18*sz),bar=.085,fm=M(parseInt((c.frameColor||'#e0701c').slice(1),16),{metalness:.72,roughness:.35});cage.rotation.y=(c.frameRotation||0)*Math.PI/180;
+if(c.frameEnabled!==false){const cage=new THREE.Group(),Lf=L*1.12*(c.frameLength||1),Wf=W*1.28*(c.frameWidth||1),Hf=H*1.22*(c.frameHeight||1),bar=.085,fm=M(parseInt((c.frameColor||'#e0701c').slice(1),16),{metalness:.72,roughness:.35});cage.rotation.y=(c.frameRotation||0)*Math.PI/180;
 const xs=[-Lf/2,Lf/2],zs=[-Wf/2,Wf/2],ys=[.35,Hf];for(const xx of xs)for(const zz of zs)B(cage,bar,Hf-.35,bar,xx,(Hf+.35)/2,zz,fm);
 for(const yy of ys){for(const zz of zs)B(cage,Lf,bar,bar,0,yy,zz,fm);for(const xx of xs)B(cage,bar,bar,Wf,xx,yy,0,fm)}
 B(cage,Lf,bar,bar,0,Hf*.56,Wf/2,fm);B(cage,Lf,bar,bar,0,Hf*.56,-Wf/2,fm);g.add(cage);g.userData.cubeFrame=cage}
@@ -273,8 +329,8 @@ if(!h(x+1,y)){h(x+1,y-1)?nr++:nb++}
 if(!(Math.abs(wx)<v.L/2&&wy>.41&&wy<1.03||wx>a&&wx<b&&wy>1.03&&wy<v.H))out++;
 if(wx>a-CS*1.5&&wx<b+CS*1.5&&wy>1.03&&wy<v.H+CS*1.5)cab++;mt=Math.max(mt,wy+CS/2)});
 const area=((b-a)/CS+3)*((v.H-1.03)/CS+1.5);
-return{m:v.m+c.cells.length*14+(c.frameSize||0)*110+c.armor*150*v.L/5.2+c.hg*55+c.spk*45,cdf:v.cd+.012*nb+.003*nr+c.armor*.012+(c.frameSize||0)*.01+c.hg*.02,cds:1.15+.0015*out+c.hg*.02+(c.frameSize||0)*.035,
-af:v.W*v.H*.85+Math.max(0,mt-v.H)*v.W,as:v.L*v.H*.72+out*CS*CS,pm:1-.5*Math.min(1,cab/area*1.6),hold:[0,14e3,3e4][c.spk],n:c.cells.length}}
+return{m:v.m+c.cells.length*14+(c.frameEnabled!==false?((c.frameLength||1)*v.L+(c.frameWidth||1)*v.W+(c.frameHeight||1)*v.H)*20:0)+c.armor*150*v.L/5.2+c.hg*55+c.spk*45,cdf:v.cd+.012*nb+.003*nr+c.armor*.012+(c.frameEnabled!==false ? .01 : 0)+c.hg*.02,cds:1.15+.0015*out+c.hg*.02+(c.frameEnabled!==false ? .035 : 0),
+af:v.W*v.H*.85+Math.max(0,mt-v.H)*v.W,as:v.L*v.H*.72+out*CS*CS+(c.frameEnabled!==false?((c.frameLength||1)+(c.frameWidth||1))*0.12:0),pm:1-.5*Math.min(1,cab/area*1.6),hold:[0,14e3,3e4][c.spk],n:c.cells.length}}
 // drag = .5*rho*Cd*A*v^2, lift = .5*rho*Cl*Aplan*v^2; slide if drag > mu*(mg-lift)+anchor; roll if overturn moment > restoring moment
 function lim(st,v,hold){let sl=0,ro=0;for(let w=5;w<140;w++){const q=.5*RHO*w*w,F=q*st.cds*st.as,N=Math.max(0,st.m*G-q*(.25+.1*v.t)*v.L*v.W);
 if(!sl&&F>.7*N+hold)sl=w;if(!ro&&F*.55*v.H>N*v.W*.5)ro=w}return[sl||140,ro||140]}
@@ -301,7 +357,8 @@ function buy(k){if(S.own[k])S.sel=k;else if(S.cr>=V[k].p){S.cr-=V[k].p;S.own[k]=
 function buyAirbag(){const c=cfgOf(S.sel);if(c.airbags)return msg('Airbags already fitted to this vehicle');if(S.cr<1200)return msg('Need 1,200 credits for airbags');S.cr-=1200;c.airbags=1;save();ui();msg('Airbag kit installed. Press Y during an intercept to deploy it.')}
 function buyProbe(){const c=cfgOf(S.sel);if(S.cr<850)return msg('Need 850 credits for a probe');S.cr-=850;c.probes=(c.probes||0)+1;save();ui();msg('Probe purchased. Exit the vehicle and press F to deploy it.')}
 function setFrameColor(color){cfgOf(S.sel).frameColor=color;draw();rebuild();ui();save()}
-function buyFrameCube(){const c=cfgOf(S.sel),next=(c.frameSize||0)+1,cost=[1200,2600,4300,6800][next-1];if(next>4)return msg('Protective cube frame is fully expanded');if(S.cr<cost)return msg('Need '+cost+' credits to expand the cube frame');S.cr-=cost;c.frameSize=next;draw();rebuild();ui();save();msg('Cube frame expanded to level '+next)}
+function toggleFrame(){const c=cfgOf(S.sel);c.frameEnabled=c.frameEnabled===false;rebuild();ui();save();msg(c.frameEnabled?'Editable cube frame installed':'Cube frame removed')}
+function resizeFrame(axis,v){const c=cfgOf(S.sel);c[axis]=cl(Number(v)||1,.85,1.85);const id=axis+'Value';if($('#'+id))$('#'+id).textContent=Math.round(c[axis]*100)+'%';rebuild();ui();save()}
 function rotateFrame(v){const c=cfgOf(S.sel);c.frameRotation=Number(v)||0;$('#frameRotateValue').textContent=c.frameRotation+'°';rebuild();save()}
 function setWrapColor(v){cfgOf(S.sel).wrapColor=v;rebuild();save()}
 function setWrapText(v){cfgOf(S.sel).wrapText=(v||'').slice(0,28);rebuild();save()}
@@ -316,11 +373,11 @@ $('#veh').innerHTML=Object.keys(V).map(k=>`<button class="${k==S.sel?'on':''}" o
 const row=(t,arr,key,f)=>`<div>${t}: `+arr.map((p,i)=>`<button class="${c[key]==i?'on':''}" onclick="setO('${key}',${i},${f})">${i?(key=='armor'?'L'+i:key=='spk'?(i*4)+' spikes':'Fit'):'None'}${i&&p!=arr[c[key]]?' '+(p-arr[c[key]]>0?'+':'')+(p-arr[c[key]]):''}</button>`).join('')+'</div>';
 $('#opt').innerHTML=row('Armor',ARM,'armor','ARM')+row('Hail guard',HG,'hg','HG')+row('Anchor spikes',SPK,'spk','SPK');
 $('#shop').innerHTML=`<div><button onclick="buyAirbag()">${c.airbags?'Airbags fitted':'Buy airbags (1,200)'}</button></div><div><button onclick="buyProbe()">Buy probe (850)</button> <span style="color:var(--mu)">Owned: ${c.probes||0}</span></div><div><button onclick="repairWindshield()">Replace damaged windshield (350)</button></div><div class="subnote">Gas stations are marked on the map. Press R near a pump to refuel for 500 credits.</div>`;
-$('#frameColor').value=c.frameColor||'#e0701c';$('#wrapColor').value=c.wrapColor||('#'+V[S.sel].c.toString(16).padStart(6,'0'));$('#wrapText').value=c.wrapText||'';$('#frameRotate').value=c.frameRotation||0;$('#frameRotateValue').textContent=(c.frameRotation||0)+'°';$('#frameLevelLabel').textContent='Cube frame level '+(c.frameSize||0)+' / 4 · '+((c.frameSize||0)?'Surrounding cage fitted':'No cage fitted');$('#stripButton').textContent=c.chassisOnly?'Restore body panels':'Strip body panels';
+$('#frameColor').value=c.frameColor||'#e0701c';$('#wrapColor').value=c.wrapColor||('#'+V[S.sel].c.toString(16).padStart(6,'0'));$('#wrapText').value=c.wrapText||'';$('#frameRotate').value=c.frameRotation||0;$('#frameRotateValue').textContent=(c.frameRotation||0)+'°';for(const axis of ['frameLength','frameWidth','frameHeight']){$('#'+axis).value=c[axis]||1;$('#'+axis+'Value').textContent=Math.round((c[axis]||1)*100)+'%'}$('#frameLevelLabel').textContent=c.frameEnabled!==false?'Starter cube frame installed · editable':'No cube frame currently fitted';$('#frameToggle').textContent=c.frameEnabled!==false?'Remove cube frame':'Restore cube frame';$('#stripButton').textContent=c.chassisOnly?'Restore body panels':'Strip body panels';
 $('#windshieldShop').innerHTML=WINDSHIELD_NAMES.map((name,i)=>`<button class="${i===(c.windshieldTier||0)?'on':''}" ${i<=(c.windshieldTier||0)?'disabled':''} onclick="buyWindshield(${i})">${name}${i?' · '+WINDSHIELD_COST[i]+' cr':''}</button>`).join('');
 const[sl,ro]=lim(st,v,0),[sh]=lim(st,v,st.hold),mp=x=>Math.round(x*2.237),R=(a,b)=>`<div class="st"><span>${a}</span><b>${b}</b></div>`;
 $('#stat').innerHTML=R('Curb weight → loaded',Math.round(v.m)+' → '+Math.round(st.m)+' kg')+R('Drag Cd (front / broadside)',st.cdf.toFixed(3)+' / '+st.cds.toFixed(2))+R('Frontal / side area',st.af.toFixed(1)+' / '+st.as.toFixed(1)+' m²')+
-R('Cube frame', (c.frameSize||0)+'/4 · '+(c.frameRotation||0)+'°')+R('Legacy frame blocks',st.n+' ('+st.n*14+' kg)')+R('Frame color',c.frameColor||'#e0701c')+R('Windshield',WINDSHIELD_NAMES[c.windshieldTier||0]) +R('Airbags',c.airbags?'Fitted':'Not fitted')+R('Probes',c.probes||0)+R('Debris shielding',Math.round((1-st.pm)*200)+'% of max')+R('Slides broadside at',mp(sl)+' mph')+(st.hold?R('With spikes anchored',mp(sh)+' mph'):'')+R('Rolls over at',mp(ro)+' mph');save()}
+R('Cube frame',c.frameEnabled!==false?('Installed · '+Math.round((c.frameLength||1)*100)+'% L / '+Math.round((c.frameWidth||1)*100)+'% W / '+Math.round((c.frameHeight||1)*100)+'% H · '+(c.frameRotation||0)+'°'):'Removed')+R('Frame color',c.frameColor||'#e0701c')+R('Windshield',WINDSHIELD_NAMES[c.windshieldTier||0]) +R('Airbags',c.airbags?'Fitted':'Not fitted')+R('Probes',c.probes||0)+R('Debris shielding',Math.round((1-st.pm)*200)+'% of max')+R('Slides broadside at',mp(sl)+' mph')+(st.hold?R('With spikes anchored',mp(sh)+' mph'):'')+R('Rolls over at',mp(ro)+' mph');save()}
 window.ARM=ARM;window.HG=HG;window.SPK=SPK;
 function makeProbe(x,z){const g=new THREE.Group(),metal=M(0xb9c5cc,{metalness:.75,roughness:.35}),bright=M(0xf28b33,{metalness:.25,roughness:.5}),dark=M(0x26343a,{metalness:.25});
   const base=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.12,10),dark);base.position.y=.08;g.add(base);
@@ -338,11 +395,12 @@ const hail=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',n
 fun.visible=pt.visible=hail.visible=false;sc.add(fun,pt,hail);
 const lightningMat=new THREE.LineBasicMaterial({color:0xd9f3ff,transparent:true,opacity:1});let lightningBolt=new THREE.Line(new THREE.BufferGeometry(),lightningMat);lightningBolt.visible=false;sc.add(lightningBolt);const lightningFlash=new THREE.PointLight(0xbfdfff,0,850,1.6);sc.add(lightningFlash);
 let T=null,Mi={on:0,car:{x:HOME.x-8,z:HOME.z,a:HOME.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0}},gameStarted=false,garageOpen=false,firstPerson=false,mapExpanded=false,sirenEnabled=true,sirenCtx=null,sirenOsc=null,sirenGain=null;const keys={};
-function playGame(){gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#garageBtn').hidden=false;$('#alarmToggle').hidden=false;$('#radarWrap').hidden=false;$('#hud').hidden=true;$('#freeHud').hidden=false;$('#garageDoorLabel').hidden=false;$('#mapToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;car.position.set(homeCar.x,0,homeCar.z);cam.position.set(homeCar.x-3.5,3.5,homeCar.z-4.5);cam.lookAt(homeCar.x+1.5,1.1,homeCar.z);$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';msg('Welcome to Silver Creek. Your vehicle is inside the home garage.')}
-function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;$('#pn').hidden=false;msg('Garage workbench opened')}else{garageOpen=false;$('#pn').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
+function playGame(){gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;car.position.set(homeCar.x,0,homeCar.z);cam.position.set(homeCar.x-3.5,3.5,homeCar.z-4.5);cam.lookAt(homeCar.x+1.5,1.1,homeCar.z);$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';msg('Welcome to Silver Creek. Your vehicle is inside the home garage.')}
+function toggleAllUI(){if(!gameStarted)return;const hidden=document.body.classList.toggle('ui-hidden');$('#uiToggle').textContent=hidden?'SHOW UI [H]':'HIDE UI [H]';}
+function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;msg('Garage workbench opened')}else{garageOpen=false;$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
 function setMapVisible(v){const el=$('#worldMapWrap');el.hidden=!v;$('#mapToggle').textContent=v?'HIDE MAP [M]':'SHOW MAP [M]';if(v)drawWorldMap()}
 function expandMap(){if($('#worldMapWrap').hidden){mapExpanded=true;setMapVisible(true)}else mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);drawWorldMap()}
-function toggleMap(){setMapVisible($('#worldMapWrap').hidden)}
+function toggleMap(){if(garageOpen&&!Mi.on){setMapVisible(false);return msg('Close the garage workbench before opening the map')}setMapVisible($('#worldMapWrap').hidden)}
 function startSiren(){if(!sirenEnabled||!Mi.on)return;try{if(!sirenCtx)sirenCtx=new (window.AudioContext||window.webkitAudioContext)();if(sirenCtx.state==='suspended')sirenCtx.resume();if(sirenOsc)return;sirenOsc=sirenCtx.createOscillator();sirenGain=sirenCtx.createGain();sirenOsc.type='sawtooth';sirenGain.gain.value=.035;sirenOsc.connect(sirenGain);sirenGain.connect(sirenCtx.destination);sirenOsc.start()}catch(e){}}
 function stopSiren(){if(sirenOsc){try{sirenOsc.stop()}catch(e){}try{sirenOsc.disconnect();sirenGain.disconnect()}catch(e){}sirenOsc=null;sirenGain=null}}
 function toggleSiren(){sirenEnabled=!sirenEnabled;$('#alarmToggle').textContent='SIRENS: '+(sirenEnabled?'ON':'OFF');if(sirenEnabled&&Mi.on&&T&&T.formed)startSiren();else stopSiren()}
@@ -398,7 +456,7 @@ T={x:homeCar.x+Math.cos(an)*d,z:homeCar.z+Math.sin(an)*d,R:65+Math.random()*60+e
 T.R0=T.R;T.sp=T.baseSp;
 Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,firstPerson,probesLeft:c.probes||0,probes:[],lastCollapseNotice:-10,windHits:c.windshieldHits||0,windshieldBroken:!!c.windshieldBroken,hailHitTimer:0,lightningClock:2+Math.random()*5,lightningFlash:0,car:{x:homeCar.x,z:homeCar.z,a:homeCar.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0}};
 sc.remove(car);car=mk(k,c,false);sc.add(car);car.position.set(Mi.car.x,0,Mi.car.z);fun.visible=false;pt.visible=false;hail.visible=false;lightningBolt.visible=false;
-$('#pn').hidden=true;garageOpen=false;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';msg('Storm watch issued. Rotation is developing; no tornado on the ground yet.');}
+$('#pn').hidden=true;garageOpen=false;$('#freeHud').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';msg('Storm watch issued. Rotation is developing; no tornado on the ground yet.');}
 function sp(d){if(!car||!car.userData.sp)return;car.userData.spTarget=d?.4:.95}
 function deployKit(){
  const cf=cfgOf(Mi.k),c=Mi.car;if(Mi.exit)return msg('Get back in the vehicle to deploy its equipment');
@@ -413,7 +471,7 @@ function exitVehicle(){const c=Mi.car;if(!Mi.exit){Mi.exit=true;Mi.player={x:c.x
 function deployProbe(){if(!Mi.exit)return msg('Press E to exit the car before deploying a probe');if(Mi.probesLeft<=0)return msg('No probes available. Buy one in the garage.');const p=Mi.player,mesh=makeProbe(p.x,p.z);Mi.probes.push({x:p.x,z:p.z,mesh});Mi.probesLeft--;msg('Probe deployed. It will send tornado data while in range.')}
 $('#c').addEventListener('click',()=>{if(Mi.on&&Mi.exit&&$('#c').requestPointerLock)$('#c').requestPointerLock()});
 document.addEventListener('mousemove',e=>{if(Mi.on&&Mi.exit&&document.pointerLockElement===$('#c')&&Mi.player)Mi.player.yaw-=e.movementX*.002});
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(e.target&&(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))&&['g','v','r','m','y','e','f'].includes(k))return;keys[k]=1;if(e.repeat&&['y','m','e','f','g','v','r'].includes(k))return;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(k==='r'){e.preventDefault();refuelAtStation();return}if(k==='g'){e.preventDefault();toggleGarage();return}if(k==='v'){e.preventDefault();firstPerson=!firstPerson;msg(firstPerson?'First-person driving view':'Third-person chase view');return}if(k==='m'){e.preventDefault();toggleMap();return}if(!Mi.on)return;if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(e.target&&(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))&&['g','v','r','m','y','e','f','h'].includes(k))return;if(k==='h'&&gameStarted){e.preventDefault();toggleAllUI();return}keys[k]=1;if(e.repeat&&['y','m','e','f','g','v','r'].includes(k))return;if((k=='`'||e.code=='Backquote')&&Mi.on){e.preventDefault();leave();return}if(k=='arrowup')keys.w=1;if(k=='arrowdown')keys.s=1;if(k=='arrowleft')keys.a=1;if(k=='arrowright')keys.d=1;if(k==='r'){e.preventDefault();refuelAtStation();return}if(k==='g'){e.preventDefault();toggleGarage();return}if(k==='v'){e.preventDefault();firstPerson=!firstPerson;msg(firstPerson?'First-person driving view':'Third-person chase view');return}if(k==='m'){e.preventDefault();toggleMap();return}if(!Mi.on)return;if(k==='e'){e.preventDefault();exitVehicle();return}if(k==='f'){e.preventDefault();deployProbe();return}if(k==='y'){e.preventDefault();deployKit();return}
 if(k==' '){e.preventDefault();const c=Mi.car,cf=cfgOf(Mi.k);if(Mi.exit)return;if(!cf.spk)return msg('No anchor spikes fitted');if(c.torn)return msg('Spikes are bent. No re-deploy.');if(c.anch){c.anch=0;sp(0);msg('Spikes up')}else if(Math.abs(c.s)<4){c.anch=1;c.spikeDeploy=1;c.s=0;sp(1);msg('Spikes anchored')}else{c.spikeDeploy=1;sp(1);msg('Spikes down; slow to anchor')}}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowup')keys.w=0;if(k=='arrowdown')keys.s=0;if(k=='arrowleft')keys.a=0;if(k=='arrowright')keys.d=0});
 function mission(dt){
@@ -457,14 +515,14 @@ function mission(dt){
  if(Mi.hp<=0||Mi.t>110)finish()
 }
 function finish(){const dead=Mi.hp<=0,pay=Math.round(Mi.data*(dead?.25:1)),rep=dead?800:0;Mi.on=0;garageOpen=true;cfgOf(Mi.k).probes=Mi.probesLeft;cfgOf(Mi.k).windshieldHits=Mi.windHits;cfgOf(Mi.k).windshieldBroken=Mi.windshieldBroken;stopSiren();$('#warningBanner').hidden=true;lightningBolt.visible=false;lightningFlash.intensity=0;if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();S.cr+=pay;S.cr=Math.max(0,S.cr-rep);save();
-$('#mapToggle').hidden=false;$('#worldMapWrap').hidden=true;$('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.peakMph||T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
+$('#pn').hidden=true;$('#hud').hidden=true;$('#ar').hidden=true;$('#freeHud').hidden=true;$('#radarWrap').hidden=true;$('#alarmToggle').hidden=true;$('#warningBanner').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#res').hidden=false;$('#res').innerHTML=`<div><h1>${dead?'Vehicle wrecked':'Intercept complete'}</h1><p>EF${T.ef} tornado, ${Math.round(T.peakMph||T.v*2.237)} mph peak winds<br>Data payout: <b>${pay}</b> credits${dead?'<br>Repairs: -800':''}</p><button onclick="back()">Back to garage</button></div>`}
 function leave(){const pay=Math.round(Mi.data);Mi.on=0;S.cr+=pay;cfgOf(Mi.k).windshieldHits=Mi.windHits;cfgOf(Mi.k).windshieldBroken=Mi.windshieldBroken;stopSiren();save();back();msg('Left the field. Banked '+pay+' credits')}
-function back(){if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft;save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#hud').hidden=$('#ar').hidden=!gameStarted;$('#freeHud').hidden=!gameStarted;$('#radarWrap').hidden=!gameStarted;$('#alarmToggle').hidden=!gameStarted;$('#warningBanner').hidden=true;$('#mapToggle').hidden=!gameStarted;$('#worldMapWrap').hidden=true;$('#pn').hidden=false;garageOpen=true;stopSiren();fun.visible=pt.visible=hail.visible=lightningBolt.visible=false;lightningFlash.intensity=0;homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;rebuild();car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;ui()}
+function back(){if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft;save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#hud').hidden=true;$('#ar').hidden=true;$('#freeHud').hidden=true;$('#radarWrap').hidden=true;$('#alarmToggle').hidden=!gameStarted;$('#warningBanner').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#pn').hidden=false;$('#garageDoorLabel').hidden=true;$('#uiToggle').hidden=false;garageOpen=true;stopSiren();fun.visible=pt.visible=hail.visible=lightningBolt.visible=false;lightningFlash.intensity=0;homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;rebuild();car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;ui()}
 function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(Mi.on||gameStarted)drawWorldMap()}addEventListener('resize',size);size();
 let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;updateDebris(dt);updateDeployAnimation(dt);
 if(Mi.on)mission(dt);else{updateTraffic(dt);updateFreeDrive(dt);if(!gameStarted){gt+=dt*.4;cam.position.set(HOME.x+Math.cos(gt)*12,6,HOME.z+Math.sin(gt)*12);cam.lookAt(HOME.x,1,HOME.z)}}
 R.render(sc,cam)})(0);
 // Start positioned at the in-town garage, with the editor hidden behind the intro until PLAY is pressed.
 const _rebuild=rebuild;rebuild=function(){_rebuild();if(car){car.position.set(Mi.on&&Mi.car?Mi.car.x:homeCar.x,0,Mi.on&&Mi.car?Mi.car.z:homeCar.z);car.rotation.y=Mi.on&&Mi.car?Mi.car.a:homeCar.a}};
-rebuild();draw();ui();$('#pn').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#garageBtn').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;
+rebuild();draw();ui();$('#uiToggle').hidden=true;$('#pn').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#garageBtn').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;
 </script></body></html>
