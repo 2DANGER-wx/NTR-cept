@@ -150,7 +150,7 @@ body.ui-hidden .ui-layer{display:none!important}
 <button id="garageBtn" class="ui-layer" hidden onclick="toggleGarage()">GARAGE WORKBENCH [G]</button>
 <button id="alarmToggle" class="ui-layer" hidden onclick="toggleSiren()">SIRENS: ON</button>
 <div id="warningBanner" class="ui-layer" hidden>SEVERE THUNDERSTORM WATCH</div>
-<div id="chaserPanel" hidden><div id="chaserTitle">LIVE CHASER RADIO · AI TEAMS</div><div id="chaserEntries"></div></div>
+<div id="chaserPanel" hidden><div id="chaserTitle">STORM CHASERS</div><div id="chaserEntries"></div></div>
 <div id="radarWrap" class="ui-layer" hidden><div id="radarHead"><span>STORM RADAR</span><span id="radarMode">STANDBY</span></div><canvas id="radar" width="360" height="360"></canvas><div id="radarInfo">Regional scan · waiting for storm data</div></div>
 <div id="freeHud" class="ui-layer" hidden></div>
 <div id="speedometer" class="ui-layer" hidden aria-label="Vehicle speedometer"><div id="speedoTop"><span>NTR-CEPT · DASH</span><span><b id="speedBlinkLeft" class="speedoArrow">◀</b> &nbsp; <b id="speedBlinkRight" class="speedoArrow">▶</b></span></div><div id="speedoMain"><span id="speedValue">0</span><small>MPH</small></div><div id="speedoTrack"><i id="speedBar"></i></div><div id="speedoFoot"><span id="speedGear">DRIVE</span><span>Z LEFT · RIGHT C</span></div></div>
@@ -162,7 +162,7 @@ body.ui-hidden .ui-layer{display:none!important}
 <div id="worldMapWrap" class="ui-layer" hidden>
   <div id="mapHeader"><span>TACTICAL WORLD MAP · TOWNS & ROADS</span><span id="mapStatus">Awaiting intercept</span><button style="font-size:10px;padding:3px 6px" onclick="expandMap()">EXPAND</button></div>
   <canvas id="worldMap" width="900" height="620" aria-label="World map showing roads, towns, player, probes, and tornado"></canvas>
-  <div id="mapLegend"><span>● Tornado</span><span>▲ Your interceptor</span><span>■ Probe</span><span>◆ AI chaser tracker</span><span>○ Town</span><span>━ Road</span><span>✚ Gas</span></div>
+  <div id="mapLegend"><span>● Tornado</span><span>▲ Your interceptor</span><span>■ Probe</span><span>◆ Storm chasers</span><span>○ Town</span><span>━ Road</span><span>✚ Gas</span></div>
 </div>
 <div id="pn" class="ui-layer"><h1>NTR-CEPT</h1><div id="cr"></div>
 <h2>Garage</h2><div id="veh"></div>
@@ -519,7 +519,7 @@ function makeCivilian(i){
   const tail=M(0xb71922,{emissive:0x330000});for(const side of[-1,1]){B(g,.06,.16,.12,-v.l/2-.02,.62,side*v.w*.32,tail);B(g,.24,.13,.11,-v.l*.12,1.0,side*(v.w*.52+.1),body)}
   const wheelGeo=new THREE.CylinderGeometry(.28,.28,.2,10);wheelGeo.rotateX(Math.PI/2);
   for(const x of[-v.l*.32,v.l*.32])for(const z of[-v.w*.52,v.w*.52]){const wheel=new THREE.Mesh(wheelGeo,rubber);wheel.position.set(x,.3,z);g.add(wheel)}
-  const axis=Math.random()<.5?'x':'z',lane=(Math.floor(Math.random()*9)-4)*500+(Math.random()<.5?-2.3:2.3),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
+  const axis=Math.random()<.5?'x':'z',roadIndex=Math.floor(Math.random()*9)-4, lane=roadIndex*500+(Math.random()<.5?-2.25:2.25),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
   const x=axis==='x'?along:lane,z=axis==='x'?lane:along,yaw=axis==='x'?(dir>0?0:Math.PI):(dir>0?-Math.PI/2:Math.PI/2);
   g.position.set(x,0,z);g.rotation.y=yaw;sc.add(g);
   traffic.push({g,x,z,startX:x,startZ:z,axis,lane,dir,speed:5+Math.random()*7,cruiseSpeed:5+Math.random()*7,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0,wait:Math.random()*1.5,stoppedAt:null});
@@ -581,6 +581,8 @@ function updateTraffic(dt){
   }
   const accel=braking?11:4;v.speed+=(target-v.speed)*Math.min(1,accel*dt/Math.max(1,v.cruiseSpeed));if(target<.35)v.speed=0;
   v.x+=v.axis==='x'?v.dir*v.speed*dt:0;v.z+=v.axis==='z'?v.dir*v.speed*dt:0;
+  // Keep civilian vehicles exactly on their assigned asphalt lane; wind only moves them after rollover.
+  if(v.axis==='x')v.z=v.lane;else v.x=v.lane;
   const pos=v.axis==='x'?v.x:v.z;if(pos>2200){if(v.axis==='x')v.x=-2200;else v.z=-2200;v.speed=v.cruiseSpeed}if(pos< -2200){if(v.axis==='x')v.x=2200;else v.z=2200;v.speed=v.cruiseSpeed}
   v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0);
  }
@@ -763,7 +765,7 @@ function drawWorldMap(){
  const player=Mi.on&&Mi.car?(Mi.exit&&Mi.player?Mi.player:Mi.car):homeCar;if(player){ctx.save();ctx.translate(X(player.x),Y(player.z));ctx.rotate(Mi.on&&Mi.exit&&Mi.player?-Mi.player.yaw:player.a||0);ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(5,5);ctx.lineTo(-5,5);ctx.closePath();ctx.fillStyle='#77f4b3';ctx.fill();ctx.restore()}
  for(const station of gasStations){ctx.fillStyle='#f4d34d';ctx.fillRect(X(station.x)-3,Y(station.z)-3,6,6)}
  for(const p of (Mi.probes||[])){ctx.fillStyle='#ffc14f';ctx.fillRect(X(p.x)-3,Y(p.z)-3,6,6)}
- // Live AI storm-chaser trackers: armored teams are cyan diamonds; the standard chase SUV is yellow.
+ // Live storm-chaser trackers: armored teams are cyan diamonds; the standard chase SUV is yellow.
  for(const b of (chaserBots||[])){if(!b.mesh)continue;const bx=X(b.mesh.position.x),by=Y(b.mesh.position.z);ctx.save();ctx.translate(bx,by);ctx.rotate(Math.PI/4);ctx.fillStyle=b.armored?'#43e6ff':'#ffc14f';ctx.strokeStyle='#06121a';ctx.lineWidth=1.5;ctx.fillRect(-4,-4,8,8);ctx.strokeRect(-4,-4,8,8);ctx.restore();if(mapExpanded){ctx.font='bold 10px Verdana';ctx.fillStyle=b.armored?'#8ff3ff':'#ffe0a0';ctx.fillText(b.name.split(' ')[0],bx+7,by-7)}}
  $('#mapStatus').textContent=Mi.on&&T?((T.phase||'STORM')+' · '+Math.round(T.v*2.237)+' mph'):('Fuel '+Math.round(S.fuel)+'% · Town roads');
 }
@@ -782,10 +784,85 @@ function updateBuildings(dt){
 function updateDebris(dt){for(let i=debrisPieces.length-1;i>=0;i--){const d=debrisPieces[i];d.life-=dt;d.vy-=9.8*dt;d.mesh.position.x+=d.vx*dt;d.mesh.position.z+=d.vz*dt;d.mesh.position.y+=d.vy*dt;d.mesh.rotation.x+=d.spin*dt;d.mesh.rotation.z+=d.spin*.7*dt;if(d.mesh.position.y<.18){d.mesh.position.y=.18;d.vy=Math.max(0,-d.vy*.25);d.vx*=.78;d.vz*=.78}if(d.life<=0){sc.remove(d.mesh);d.mesh.geometry.dispose();debrisPieces.splice(i,1)}}}
 const chaserRoster=[{name:'Mason Cole',team:'Prairie Storm Unit',color:0x38a8d5,angle:.2,armored:true,vehicle:'Armored interceptor'},{name:'Jules Rivera',team:'SkyTrack 7',color:0xf0b43c,angle:2.25,armored:false,vehicle:'Standard chase SUV'},{name:'Casey Brooks',team:'Cyclone Research',color:0x68c58a,angle:4.3,armored:true,vehicle:'Armored research truck'}];let chaserBots=[];let chaserReportClock=0;
 function makeChaserVehicle(spec){const g=new THREE.Group(),bodyMat=new THREE.MeshStandardMaterial({color:spec.color,roughness:.48,metalness:.18}),dark=new THREE.MeshStandardMaterial({color:0x15212a,roughness:.8}),glass=new THREE.MeshStandardMaterial({color:0x8bc8d8,metalness:.25,roughness:.2});const body=new THREE.Mesh(new THREE.BoxGeometry(5.1,1.25,2.5),bodyMat);body.position.y=1.15;body.castShadow=true;g.add(body);const cabin=new THREE.Mesh(new THREE.BoxGeometry(2.45,.92,2.05),glass);cabin.position.set(-.25,2.12,0);cabin.castShadow=true;g.add(cabin);for(const x of [-1.65,1.65])for(const z of [-1.32,1.32]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.22,10),dark);w.rotation.x=Math.PI/2;w.position.set(x,.55,z);g.add(w)}if(spec.armored){const armorMat=new THREE.MeshStandardMaterial({color:0x303c43,metalness:.55,roughness:.7});const front=new THREE.Mesh(new THREE.BoxGeometry(.7,.55,2.62),armorMat);front.position.set(2.35,1.25,0);g.add(front);const roof=new THREE.Mesh(new THREE.BoxGeometry(2.5,.18,2.15),armorMat);roof.position.set(-.25,2.62,0);g.add(roof);for(const side of [-1,1]){const plate=new THREE.Mesh(new THREE.BoxGeometry(2.8,.5,.12),armorMat);plate.position.set(-.2,1.55,side*1.28);g.add(plate)}}const bar=new THREE.Mesh(new THREE.BoxGeometry(1.1,.16,.24),new THREE.MeshStandardMaterial({color:0xff4747,emissive:0x501010}));bar.position.set(-.3,2.65,0);g.add(bar);sc.add(g);return g}
-function startChaserBots(){for(const b of chaserBots)sc.remove(b.mesh);chaserBots=chaserRoster.map(spec=>({...spec,mesh:makeChaserVehicle(spec),report:'Tracking the developing circulation.',lastReport:0}));$('#chaserPanel').hidden=false;renderChaserReports(true)}
+// Storm chasers use the paved road grid. They route from intersection to intersection,
+// stay inside the asphalt lanes, stop for red lights, and pause at unsignalized intersections.
+const CHASER_GRID=500,CHASER_LANE=2.25,CHASER_WORLD_EDGE=2000;
+function chaserGridCoord(n){return cl(Math.round(n/CHASER_GRID)*CHASER_GRID,-CHASER_WORLD_EDGE,CHASER_WORLD_EDGE)}
+function chaserRoadNode(x,z){return {x:chaserGridCoord(x),z:chaserGridCoord(z)}}
+function sameRoadPoint(a,b){return Math.hypot(a.x-b.x,a.z-b.z)<.05}
+function chaserLaneOffset(axis,dir){if(axis==='x')return {x:0,z:dir>0?CHASER_LANE:-CHASER_LANE};return {x:dir>0?-CHASER_LANE:CHASER_LANE,z:0}}
+function buildChaserRoadRoute(start,end,xFirst){
+ // Routes use lane-center waypoints on each paved road. Turns happen only inside the road intersection.
+ const nodes=[{x:start.x,z:start.z}],cur={x:start.x,z:start.z};
+ const walk=(axis,target)=>{while(cur[axis]!==target){cur[axis]+=Math.sign(target-cur[axis])*CHASER_GRID;nodes.push({x:cur.x,z:cur.z})}};
+ if(xFirst){walk('x',end.x);walk('z',end.z)}else{walk('z',end.z);walk('x',end.x)}
+ if(nodes.length<2)return [{x:start.x,z:start.z,intersection:false},{x:start.x+CHASER_GRID,z:start.z+CHASER_LANE,intersection:true,nodeX:start.x+CHASER_GRID,nodeZ:start.z,axis:'x',dir:1}];
+ const points=[];
+ const add=(p)=>{const last=points[points.length-1];if(!last||!sameRoadPoint(last,p))points.push(p)};
+ for(let i=0;i<nodes.length-1;i++){
+  const a=nodes[i],n=nodes[i+1],dx=n.x-a.x,dz=n.z-a.z,axis=dx?'x':'z',dir=dx?Math.sign(dx):Math.sign(dz),off=chaserLaneOffset(axis,dir);
+  const laneStart={x:a.x+off.x,z:a.z+off.z},laneEnd={x:n.x+off.x,z:n.z+off.z};
+  if(i===0)add({x:start.x,z:start.z,intersection:false});
+  add({...laneStart,intersection:false});
+  add({...laneEnd,intersection:true,nodeX:n.x,nodeZ:n.z,axis,dir});
+  if(i<nodes.length-2){
+   const nn=nodes[i+2],nextAxis=nn.x!==n.x?'x':'z',nextDir=nextAxis==='x'?Math.sign(nn.x-n.x):Math.sign(nn.z-n.z),nextOff=chaserLaneOffset(nextAxis,nextDir);
+   // One short connector inside the junction, then immediately align with the next road lane.
+   add({x:n.x,z:n.z,intersection:false,turn:true});
+   add({x:n.x+nextOff.x,z:n.z+nextOff.z,intersection:false});
+  }
+ }
+ return points;
+}
+function planStormChaserRoute(b){
+ const start=chaserRoadNode(b.mesh.position.x,b.mesh.position.z),candidates=[];
+ for(let x=-CHASER_WORLD_EDGE;x<=CHASER_WORLD_EDGE;x+=CHASER_GRID)for(let z=-CHASER_WORLD_EDGE;z<=CHASER_WORLD_EDGE;z+=CHASER_GRID){if(x===start.x&&z===start.z)continue;const d=Math.hypot(x-T.x,z-T.z),safe=Math.max(170,(T.R||80)*1.05+70);if(d>=safe&&d<=1050)candidates.push({x,z,d})}
+ if(!candidates.length){for(let x=-CHASER_WORLD_EDGE;x<=CHASER_WORLD_EDGE;x+=CHASER_GRID)for(let z=-CHASER_WORLD_EDGE;z<=CHASER_WORLD_EDGE;z+=CHASER_GRID){if(x===start.x&&z===start.z)continue;candidates.push({x,z,d:Math.hypot(x-T.x,z-T.z)})}}
+ candidates.sort((a,b)=>a.d-b.d);const options=candidates.slice(0,Math.min(7,candidates.length));const pick=options[(b.routePlanCount*2+chaserBots.indexOf(b))%options.length];
+ b.routePlanCount++;b.routePoints=buildChaserRoadRoute(start,{x:pick.x,z:pick.z},b.routePlanCount%2===0);b.routeIndex=1;b.routeTarget={x:pick.x,z:pick.z};b.stopControlKey=null;b.stopTimer=0;
+}
+function startChaserBots(){
+ for(const b of chaserBots)sc.remove(b.mesh);
+ const spawn=[{x:-500,z:-500},{x:-500,z:0},{x:0,z:-500}];
+ chaserBots=chaserRoster.map((spec,i)=>{const mesh=makeChaserVehicle(spec);mesh.position.set(spawn[i%spawn.length].x,0,spawn[i%spawn.length].z);return {...spec,mesh,report:'Tracking the developing circulation.',lastReport:0,routePoints:[],routeIndex:0,routePlanCount:i,speed:18+i*1.5,stopControlKey:null,stopTimer:0,status:'Following paved roads toward the storm'};});
+ for(const b of chaserBots)planStormChaserRoute(b);
+ $('#chaserPanel').hidden=false;renderChaserReports(true)
+}
 function stopChaserBots(){for(const b of chaserBots)sc.remove(b.mesh);chaserBots=[];$('#chaserPanel').hidden=true}
-function renderChaserReports(force=false){if(!T||!Mi.on)return;const age=T.age||0,mph=Math.round((T.v||0)*2.237),width=Math.round((T.R||0)*2),stage=T.phase||'STORM WATCH';let base;if(!T.formed)base='Rotation is organizing; funnel has not reached the ground.';else if(T.deform>.65)base='The circulation is narrowing and bending into a rope-out shape. Keep monitoring debris and wind.';else if(T.deform>.05)base='Funnel is becoming uneven and tilted; the circulation is changing shape.';else if(mph>150)base='Strong circulation reported. Debris is wrapping around the low-level vortex.';else if(mph>100)base='Visible tornado with a broad debris field; wind estimate is increasing.';else base='Tornado is on the ground. Tracking its motion and changes in width.';const reports=[base,`Observed stage: ${stage}. Estimated max wind: ${mph} mph; visible circulation width: about ${width} m.`,`Tornado track is shifting ${Math.abs(T.vx||0)>Math.abs(T.vz||0)?'east-west':'north-south'}; team is keeping distance and relaying updates.`];$('#chaserEntries').innerHTML=chaserBots.map((b,i)=>{const text=reports[(Math.floor((Mi.t+ i*3)/7)+i)%reports.length];return `<div class="chaserEntry"><b>${b.name} · ${b.team}</b><span>${b.vehicle} · ${b.armored?'ARMORED INTERCEPT CAPABLE':'OBSERVATION / SAFE-DISTANCE ROLE'}<br>${b.status||'Moving to position.'}<br>${text}</span></div>`}).join('')}
-function updateChaserBots(dt){if(!Mi.on||!T||!chaserBots.length)return;for(const b of chaserBots){b.angle+=dt*(b.armored?.055:.025);const vx=T.vx||Math.cos(T.a)*T.sp,vz=T.vz||Math.sin(T.a)*T.sp;let radius,tx,tz;if(b.armored&&T.formed&&T.fade>.35){radius=118+Math.sin(Mi.t*.13+b.angle)*22;const lead=cl(Math.hypot(vx,vz)*9,25,75);tx=T.x+Math.cos(b.angle)*radius+vx*lead;tz=T.z+Math.sin(b.angle)*radius+vz*lead;b.status='Intercepting at a controlled distance · '+Math.round(Math.hypot(tx-b.mesh.position.x,tz-b.mesh.position.z))+' m to target';}else{radius=b.armored?190:310;tx=T.x+Math.cos(b.angle)*radius;tz=T.z+Math.sin(b.angle)*radius;b.status=b.formed?'Holding an observation position':'Approaching the storm to monitor development'}b.mesh.position.x+=(tx-b.mesh.position.x)*Math.min(1,dt*(b.armored&&T.formed?0.6:.32));b.mesh.position.z+=(tz-b.mesh.position.z)*Math.min(1,dt*(b.armored&&T.formed?0.6:.32));b.mesh.rotation.y=Math.atan2(-(T.x-b.mesh.position.x),T.z-b.mesh.position.z)}chaserReportClock+=dt;if(chaserReportClock>3){chaserReportClock=0;renderChaserReports()}}
+function renderChaserReports(force=false){if(!T||!Mi.on)return;const mph=Math.round((T.v||0)*2.237),width=Math.round((T.R||0)*2),stage=T.phase||'STORM WATCH';let base;if(!T.formed)base='Rotation is organizing; funnel has not reached the ground.';else if(T.deform>.65)base='The circulation is narrowing and bending into a rope-out shape. Keep monitoring debris and wind.';else if(T.deform>.05)base='Funnel is becoming uneven and tilted; the circulation is changing shape.';else if(mph>150)base='Strong circulation reported. Debris is wrapping around the low-level vortex.';else if(mph>100)base='Visible tornado with a broad debris field; wind estimate is increasing.';else base='Tornado is on the ground. Tracking its motion and changes in width.';const reports=[base,`Observed stage: ${stage}. Estimated max wind: ${mph} mph; visible circulation width: about ${width} m.`,`Tornado track is shifting ${Math.abs(T.vx||0)>Math.abs(T.vz||0)?'east-west':'north-south'}; teams are following roads and relaying updates.`];$('#chaserEntries').innerHTML=chaserBots.map((b,i)=>{const text=reports[(Math.floor((Mi.t+i*3)/7)+i)%reports.length];return `<div class="chaserEntry"><b>${b.name} · ${b.team}</b><span>${b.vehicle} · ${b.armored?'ARMORED INTERCEPT CAPABLE':'OBSERVATION / SAFE-DISTANCE ROLE'}<br>${b.status||'Following paved roads.'}<br>${text}</span></div>`}).join('')}
+function updateChaserBots(dt){
+ if(!Mi.on||!T||!chaserBots.length)return;const now=performance.now()/1000;
+ for(const b of chaserBots){
+  if(!b.routePoints||b.routeIndex>=b.routePoints.length)planStormChaserRoute(b);
+  let budget=b.speed*dt,guard=0;
+  while(budget>.001&&b.routePoints&&b.routeIndex<b.routePoints.length&&guard++<12){
+   const p=b.routePoints[b.routeIndex],dx=p.x-b.mesh.position.x,dz=p.z-b.mesh.position.z,dist=Math.hypot(dx,dz);
+   if(dist<.55){b.mesh.position.x=p.x;b.mesh.position.z=p.z;b.routeIndex++;b.stopControlKey=null;continue}
+   const axis=Math.abs(dx)>=Math.abs(dz)?'x':'z';b.mesh.rotation.y=Math.atan2(-dz,dx);
+   let maxTravel=dist;
+   if(p.intersection&&p.axis&&dist<22){
+    const sigNode=Math.abs(p.nodeX/1000-Math.round(p.nodeX/1000))<.001&&Math.abs(p.nodeZ/1000-Math.round(p.nodeZ/1000))<.001;
+    const key=`${p.nodeX}:${p.nodeZ}:${p.axis}:${p.dir}`;
+    if(sigNode){
+     const state=signalState({x:p.nodeX,z:p.nodeZ,axis:p.axis},now);
+     if(state==='red'||(state==='yellow'&&dist>8)){
+      maxTravel=Math.max(0,dist-8);if(maxTravel<=.02)break;
+     }
+    }else if(dist<8){
+     if(b.stopControlKey!==key){b.stopControlKey=key;b.stopTimer=.9}
+     if(b.stopTimer>0){b.stopTimer=Math.max(0,b.stopTimer-dt);break}
+    }
+   }
+   const travel=Math.min(budget,maxTravel);if(travel<=.001)break;
+   b.mesh.position.x+=dx/dist*travel;b.mesh.position.z+=dz/dist*travel;budget-=travel;
+   if(travel>=maxTravel-.001&&maxTravel<dist-.001)break;
+  }
+  if(b.routeIndex>=b.routePoints.length){b.status='Reached a road junction; routing toward a new storm-side position'}
+  else {const p=b.routePoints[b.routeIndex],distance=Math.round(Math.hypot(p.x-b.mesh.position.x,p.z-b.mesh.position.z));b.status='On paved roads · '+distance+' m to next junction';}
+  b.mesh.position.y=0;
+ }
+ chaserReportClock+=dt;if(chaserReportClock>3){chaserReportClock=0;renderChaserReports()}
+}
 function go(){if(!gameStarted){playGame()}turnSignalMode=0;cameraAutoTrackTornado=false;if(sirenEnabled){try{if(!sirenCtx)sirenCtx=new (window.AudioContext||window.webkitAudioContext)();if(sirenCtx.state==='suspended')sirenCtx.resume()}catch(e){}}const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<18?0:q<43?1:q<67?2:q<84?3:q<95?4:5,
 rg=[[65,85],[86,110],[111,135],[136,165],[166,200],[201,250]][e],peakMph=rg[0]+Math.random()*(rg[1]-rg[0]),an=Math.random()*6.28,d=620+Math.random()*260;
 T={x:homeCar.x+Math.cos(an)*d,z:homeCar.z+Math.sin(an)*d,R:65+Math.random()*60+e*7,baseR:65+Math.random()*60+e*7,v:Math.max(2,peakMph/2.237*.07),peakV:peakMph/2.237,peakMph,ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:3+Math.random()*3,baseSp:3+Math.random()*3,hail:Math.random()<.6?.45+Math.random()*.55:0,history:[],lastTrail:-10,formTimer:0,formDuration:6+Math.random()*3,formed:false,phase:'SUPERCELL WATCH',baseX:homeCar.x+Math.cos(an)*d,baseZ:homeCar.z+Math.sin(an)*d};
@@ -794,7 +871,7 @@ T.R0=T.R;T.sp=T.baseSp;T.age=0;T.deformStart=300+Math.random()*120;T.deform=0;T.
 const stormDx=T.x-homeCar.x,stormDz=T.z-homeCar.z;cameraOrbitYaw=Math.atan2(-stormDz,-stormDx)-homeCar.a;lastDriverHeading=homeCar.a;cameraOrbitPitch=.22;cameraOrbitDistance=11;freeCamDetached=false;lastFocusDriverX=homeCar.x;lastFocusDriverZ=homeCar.z;
 Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,firstPerson,probesLeft:c.probes||0,probes:[],probeCameraIndex:-1,lastCollapseNotice:-10,windHits:c.windshieldHits||0,windshieldBroken:!!c.windshieldBroken,hailHitTimer:0,lightningClock:2+Math.random()*5,lightningFlash:0,car:{x:homeCar.x,z:homeCar.z,a:homeCar.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0}};
 sc.remove(car);car=mk(k,c,false);sc.add(car);car.position.set(Mi.car.x,0,Mi.car.z);fun.visible=true;pt.visible=true;pt.material.opacity=.22;fun.material.opacity=.38;fun.position.set(T.x,150,T.z);fun.scale.set(T.R*.7,300,T.R*.7);hail.visible=false;lightningBolt.visible=false;resetBuildings();setStormLook(.12);
-$('#pn').hidden=true;garageOpen=false;$('#freeHud').hidden=true;$('#garageBtn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';startChaserBots();msg('Storm watch issued. AI chase teams are reporting live. Rotation is developing; no tornado on the ground yet.');}
+$('#pn').hidden=true;garageOpen=false;$('#freeHud').hidden=true;$('#garageBtn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';startChaserBots();msg('Storm watch issued. Storm chasers are reporting live. Rotation is developing; no tornado on the ground yet.');}
 function sp(d){if(!car||!car.userData.sp)return;car.userData.spTarget=d?.4:.95}
 function deployKit(){
  const cf=cfgOf(Mi.k),c=Mi.car;if(Mi.exit)return msg('Get back in the vehicle to deploy its equipment');
