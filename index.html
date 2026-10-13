@@ -161,6 +161,8 @@ body.ui-hidden .ui-layer{display:none!important}
 <div class="frameAttachGrid"><button onclick="addFrameCube('x',1)">BUY + ATTACH FRONT (+X)</button><button onclick="addFrameCube('x',-1)">BUY + ATTACH REAR (−X)</button><button onclick="addFrameCube('z',1)">BUY + ATTACH RIGHT (+Z)</button><button onclick="addFrameCube('z',-1)">BUY + ATTACH LEFT (−Z)</button><button onclick="addFrameCube('y',1)">BUY + ATTACH ABOVE (+Y)</button><button onclick="addFrameCube('y',-1)">BUY + ATTACH BELOW (−Y)</button></div>
 <div class="subnote">Each new cube snaps to the selected cube. Use the length, width, and height sliders to make any side as thin as 0.05 m (5 cm), in 0.01 m (1 cm) steps. You can also drag a face handle to resize that axis.</div>
 <div class="frameSelectRow"><button id="frameToggle" onclick="toggleFrame()">Hide cube frame</button><button onclick="removeFrameCube()">Sell selected cube (+75)</button></div>
+<div class="frameSelectRow" id="frameClipboardControls"><button onclick="copySelectedFrameCubes()">COPY SELECTED (Ctrl+C)</button><button onclick="pasteFrameCubes()">PASTE COPIED (Ctrl+V)</button></div>
+<div class="frameSelectRow"><button onclick="invertFrame()">INVERT FRAME</button><span class="subnote">Mirrors all frame cubes left-to-right across the vehicle centerline.</span></div>
 <label for="frameLength">Length of selected cube: <span id="frameLengthValue">0.45 m</span></label><input id="frameLength" type="range" min="0.05" max="7" step="0.01" value="0.45" oninput="resizeFrame('frameLength',this.value)">
 <label for="frameWidth">Width of selected cube: <span id="frameWidthValue">0.45 m</span></label><input id="frameWidth" type="range" min="0.05" max="4.5" step="0.01" value="0.45" oninput="resizeFrame('frameWidth',this.value)">
 <label for="frameHeight">Height of selected cube: <span id="frameHeightValue">0.45 m</span></label><input id="frameHeight" type="range" min="0.05" max="4.5" step="0.01" value="0.45" oninput="resizeFrame('frameHeight',this.value)">
@@ -622,6 +624,12 @@ function resizeFrame(axis,v){const c=cfgOf(S.sel),p=selectedFrame(c),prop=axis==
 function rotateFrame(v){const c=cfgOf(S.sel),p=selectedFrame(c);p.rotation=cl(Number(v)||0,-180,180);$('#frameRotateValue').textContent=p.rotation+'°';rebuild();save();ui()}
 function rotateFrameVertical(step=15){const c=cfgOf(S.sel),p=selectedFrame(c);let next=Number(p.rotationV)||0;if(step===0)next=0;else{next+=step;while(next>180)next-=360;while(next<-180)next+=360}p.rotationV=next;rebuild();save();ui();$('#frameRotateVerticalValue').textContent=next+'°';msg(next===0?'Vertical tilt reset':'Vertical tilt: '+(next>0?'+':'')+next+'°')}
 function roundFrame(v){const c=cfgOf(S.sel),p=selectedFrame(c);p.roundness=cl(Number(v)||0,0,45)/100;$('#frameRoundnessValue').textContent=Math.round(p.roundness*100)+'%';rebuild();save();ui()}
+function invertFrame(){
+ const c=cfgOf(S.sel);if(!c.frameCubes.length)return msg('Add a frame cube first');
+ // Reflect the complete assembly across the vehicle centerline (Z=0), preserving size and spacing.
+ for(const p of c.frameCubes){p.z=-(Number(p.z)||0);p.rotation=-(Number(p.rotation)||0);p.rotationV=-(Number(p.rotationV)||0)}
+ frameMultiSelection.clear();rebuild();ui();save();focusSelectedFrameCube();msg('Frame inverted: left and right sides mirrored across the vehicle centerline.');
+}
 function setWrapColor(v){cfgOf(S.sel).wrapColor=v;rebuild();save()}
 function setWrapText(v){cfgOf(S.sel).wrapText=(v||'').slice(0,28);rebuild();save()}
 function loadWrapImage(input){const f=input.files&&input.files[0];if(!f)return;if(!f.type.startsWith('image/'))return msg('Choose an image file');const reader=new FileReader();reader.onload=()=>{const im=new Image();im.onload=()=>{const cv=document.createElement('canvas');cv.width=512;cv.height=192;const cx=cv.getContext('2d');const scale=Math.min(512/im.width,192/im.height);const w=im.width*scale,h=im.height*scale;cx.drawImage(im,(512-w)/2,(192-h)/2,w,h);const data=cv.toDataURL('image/jpeg',.72);cfgOf(S.sel).wrapImageData=data;rebuild();save();msg('Wrap image applied to both sides')};im.src=reader.result};reader.readAsDataURL(f)}
@@ -672,7 +680,7 @@ function syncFreeCamToDriver(c){const dx=c.x-lastFocusDriverX,dz=c.z-lastFocusDr
 function updateFreeCamera(){const d=(garageOpen&&!Mi.on)?garageOrbitDistance:cameraOrbitDistance,pitch=cl(cameraOrbitPitch,.035,1.52),horizontal=d*Math.cos(pitch);cam.position.set(freeCamFocusX+Math.cos(cameraOrbitYaw)*horizontal,freeCamFocusY+d*Math.sin(pitch),freeCamFocusZ+Math.sin(cameraOrbitYaw)*horizontal);cam.lookAt(freeCamFocusX,freeCamFocusY,freeCamFocusZ)}
 function playGame(){S.fuel=START_FUEL;save();gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;cameraOrbitYaw=Math.PI-homeCar.a;cameraOrbitPitch=.34;cameraOrbitDistance=8;garageOrbitDistance=4.2;cameraPanX=0;cameraPanZ=0;car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;car.updateMatrixWorld(true);const startBlock=selectedFrame(cfgOf(S.sel)),focus=car.localToWorld(new THREE.Vector3(startBlock.x,startBlock.y,startBlock.z));setFreeCamFocus(focus.x,focus.y,focus.z);freeCamDetached=false;$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';ui();msg('Welcome to Silver Creek. Starting fuel: 50%. Click and drag a block to move it; use the colored handles to resize, and the vertical-tilt buttons to angle it. The camera follows the vehicle while you drive.')}
 function toggleAllUI(){if(!gameStarted)return;const hidden=document.body.classList.toggle('ui-hidden');$('#uiToggle').textContent=hidden?'SHOW UI [H]':'HIDE UI [H]';}
-function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Click-drag to move a cube; Alt-click cycles overlapping cubes; Shift-click selects multiple cubes; Ctrl+C copies selection and Ctrl+V pastes it. Use PREV/NEXT to select any cube.')}else{garageOpen=false;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
+function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Click-drag to move a cube; Alt-click cycles overlapping cubes; Shift-click selects multiple cubes; use COPY SELECTED / PASTE COPIED or Ctrl+C / Ctrl+V. INVERT FRAME mirrors the full assembly left-to-right. Use PREV/NEXT to select any cube.')}else{garageOpen=false;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
 function setMapVisible(v){const el=$('#worldMapWrap');el.hidden=!v;$('#mapToggle').textContent=v?'HIDE MAP [M]':'SHOW MAP [M]';if(v)drawWorldMap()}
 function expandMap(){if($('#worldMapWrap').hidden){mapExpanded=true;setMapVisible(true)}else mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);drawWorldMap()}
 function toggleMap(){if(garageOpen&&!Mi.on){setMapVisible(false);return msg('Close the garage workbench before opening the map')}setMapVisible($('#worldMapWrap').hidden)}
@@ -787,20 +795,21 @@ function activeCameraDistance(){return garageOpen&&!Mi.on?garageOrbitDistance:ca
 function pixelsToAxisDelta(axis,p,dx,dy){const v=projectedAxisPixels(axis,p),den=v.x*v.x+v.y*v.y,dist=activeCameraDistance();if(den<.0001)return -dy*(2*dist*Math.tan(cam.fov*Math.PI/360)/Math.max(200,worldCanvas.clientHeight));return(dx*v.x+dy*v.y)/den}
 function copyPart(p){return{x:p.x,y:p.y,z:p.z,l:p.l,w:p.w,h:p.h,rotation:p.rotation||0,rotationV:p.rotationV||0,roundness:p.roundness||0}}
 function copySelectedFrameCubes(){
- if(!garageOpen||Mi.on)return;
- const c=cfgOf(S.sel),indices=frameMultiSelection.size?[...frameMultiSelection].sort((a,b)=>a-b):[c.frameSelected];
- frameClipboard=indices.filter(i=>c.frameCubes[i]).map(i=>copyPart(c.frameCubes[i]));
- msg('Copied '+frameClipboard.length+' frame cube'+(frameClipboard.length===1?'':'s')+'. Press Ctrl+V to paste.');
+ if(!garageOpen||Mi.on)return msg('Open the garage workbench before copying frame cubes.');
+ const c=cfgOf(S.sel),valid=[...frameMultiSelection].filter(i=>Number.isInteger(i)&&i>=0&&i<c.frameCubes.length),indices=(valid.length?valid:[c.frameSelected]).filter(i=>c.frameCubes[i]);
+ frameClipboard=indices.map(i=>copyPart(c.frameCubes[i]));
+ if(!frameClipboard.length)return msg('Select a frame cube first.');
+ msg('Copied '+frameClipboard.length+' frame cube'+(frameClipboard.length===1?'':'s')+'. Use PASTE COPIED or Ctrl+V.');
 }
 function pasteFrameCubes(){
- if(!garageOpen||Mi.on)return;
- if(!frameClipboard.length)return msg('Nothing copied yet. Shift-click frame cubes, then press Ctrl+C.');
+ if(!garageOpen||Mi.on)return msg('Open the garage workbench before pasting frame cubes.');
+ if(!frameClipboard.length)return msg('Nothing copied yet. Select cube(s), then press Ctrl+C or COPY SELECTED.');
  const c=cfgOf(S.sel),copies=frameClipboard.map(copyPart),zMin=Math.min(...copies.map(p=>p.z-(p.w||FRAME_BASE)/2)),zMax=Math.max(...copies.map(p=>p.z+(p.w||FRAME_BASE)/2)),offset=Math.max(.65,zMax-zMin+.25);
  const cost=copies.reduce((sum,p)=>sum+FRAME_CUBE_BASE+frameExpansionCost(p),0);
  if(S.cr<cost)return msg('Need '+cost.toLocaleString()+' credits to paste '+copies.length+' frame cube'+(copies.length===1?'':'s'));
  const newIndices=[];
  for(const p of copies){p.z+=offset;c.frameCubes.push(p);newIndices.push(c.frameCubes.length-1)}
- S.cr-=cost;c.frameSelected=newIndices[newIndices.length-1];c.frameEnabled=true;frameMultiSelection=new Set(newIndices);rebuild();ui();save();focusSelectedFrameCube();msg('Pasted '+copies.length+' frame cube'+(copies.length===1?'':'s')+' · drag or resize the pasted cubes as needed.');
+ S.cr-=cost;c.frameSelected=newIndices[newIndices.length-1];c.frameEnabled=true;frameMultiSelection=new Set(newIndices);rebuild();ui();save();focusSelectedFrameCube();msg('Pasted '+copies.length+' frame cube'+(copies.length===1?'':'s')+' · '+cost.toLocaleString()+' credits charged.');
 }
 function pointerOnHorizontalPlane(e,planeY){const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(ndc,cam);return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-planeY),new THREE.Vector3())}
 function beginFrameMoveDrag(e,idx){const c=cfgOf(S.sel);if(idx!==c.frameSelected){c.frameSelected=idx;rebuild();ui();save()}const p=c.frameCubes[idx],world=cubeWorldCenter(p),startPoint=pointerOnHorizontalPlane(e,world.y);if(!startPoint)return false;frameDragState={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,idx,action:'move',start:copyPart(p),startCredits:S.cr,startCost:frameExpansionCost(p),planeY:world.y,startPlanePoint:startPoint.clone(),moved:false};try{worldCanvas.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault();return true}
@@ -826,6 +835,15 @@ function updateLiveFrameBlock(idx,p){if(!car)return;const root=car.userData.cube
  if(car.userData.frameGizmo&&idx===cfgOf(S.sel).frameSelected)updateFrameGizmoVisual(car.userData.frameGizmo,p);}
 function syncLiveFrameControls(p){for(const axis of ['frameLength','frameWidth','frameHeight']){const prop=axis==='frameLength'?'l':axis==='frameWidth'?'w':'h';$('#'+axis).value=p[prop];$('#'+axis+'Value').textContent=p[prop].toFixed(2)+' m'}$('#frameRotate').value=p.rotation||0;$('#frameRotateValue').textContent=(p.rotation||0).toFixed(0)+'°';$('#frameRotateVerticalValue').textContent=(p.rotationV||0).toFixed(0)+'°';$('#frameRoundness').value=Math.round((p.roundness||0)*100);$('#frameRoundnessValue').textContent=Math.round((p.roundness||0)*100)+'%';$('#framePrice').textContent='Selected cube volume: '+frameVolume(p).toFixed(2)+' m³ · expansion price: '+frameExpansionCost(p).toLocaleString()+' cr · total frame value: '+totalFrameCost().toLocaleString()+' cr';$('#cr').innerHTML='Credits: <b style="color:var(--ok)">'+S.cr.toLocaleString()+'</b><br>Fuel reserve: <b style="color:'+(S.fuel<20?'#ff7777':'#83eeb1')+'">'+Math.round(S.fuel)+'%</b>'}
 let frameDragState=null;
+// Capture clipboard shortcuts at document level; the canvas does not need keyboard focus.
+// Visible COPY/PASTE buttons offer the same actions if a browser intercepts the shortcuts.
+document.addEventListener('keydown',e=>{
+ const k=(e.key||'').toLowerCase(),tg=e.target&&e.target.tagName,type=e.target&&e.target.type;
+ if(!(garageOpen&&!Mi.on&&(e.ctrlKey||e.metaKey)&&(k==='c'||k==='v')))return;
+ if(tg==='TEXTAREA'||(tg==='INPUT'&&!['range','color','file'].includes(type))||tg==='SELECT')return;
+ e.preventDefault();e.stopImmediatePropagation();
+ if(k==='c')copySelectedFrameCubes();else pasteFrameCubes();
+},true);
 worldCanvas.addEventListener('pointerdown',e=>{
  if((e.button!==0&&e.button!==2)||document.pointerLockElement===worldCanvas)return;
  if(e.button===0&&gameStarted&&garageOpen&&!Mi.on&&e.shiftKey){
