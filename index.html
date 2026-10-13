@@ -266,6 +266,15 @@ for(let p=-2000;p<=2000;p+=500){
   B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p-4.85,roadWhite);B(roadGroup,ROAD_SPAN,.025,.13,0,.105,p+4.85,roadWhite);
   B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p-.12,roadYellow);B(roadGroup,ROAD_SPAN,.028,.12,0,.108,p+.12,roadYellow);
 }
+// Street lighting and signalized intersections along the main road grid.
+const streetLights=[],trafficSignals=[];
+const poleMat=M(0x343b40,{roughness:.8,metalness:.45}),lampMat=M(0xffedb0,{emissive:0x665522,roughness:.3}),signalBlack=M(0x171b1f,{roughness:.7}),signalRed=M(0xd92525,{emissive:0x550000}),signalYellow=M(0xf5bd2e,{emissive:0x4b3200}),signalGreen=M(0x27d36a,{emissive:0x064a20});
+function addStreetLight(x,z,alongX=false){const g=new THREE.Group();B(g,.16,7,.16,0,3.5,0,poleMat);B(g,2.1,.12,.12,alongX?-.75:0,6.8,alongX?0:-.75,poleMat);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),lampMat);bulb.position.set(alongX?-1.65:0,6.65,alongX?0:-1.65);g.add(bulb);g.position.set(x,0,z);roadGroup.add(g);streetLights.push({g,bulb})}
+function addTrafficSignal(x,z,axis='x') {const g=new THREE.Group();B(g,.12,5.5,.12,0,2.75,0,poleMat);B(g,.72,1.8,.38,0,5.1,0,signalBlack);const lamps=[];for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.19,10,8),[signalRed,signalYellow,signalGreen][i]);m.position.set(0,5.65-i*.55,.22);g.add(m);lamps.push(m)}g.position.set(x,0,z);roadGroup.add(g);trafficSignals.push({x,z,axis,g,lamps,offset:Math.random()*20});}
+for(let p=-2000;p<=2000;p+=500){for(let z=-2000;z<=2000;z+=1000)addStreetLight(p+13,z+13,true);}
+for(let x=-2000;x<=2000;x+=1000)for(let z=-2000;z<=2000;z+=1000){addTrafficSignal(x+7,z+7,'x');addTrafficSignal(x-7,z-7,'z')}
+function signalState(sig,t){const phase=(t+sig.offset)%24;return phase<10?'green':phase<12?'yellow':'red'}
+function updateSignals(dt){const t=performance.now()/1000;for(const sig of trafficSignals){const state=signalState(sig,t);sig.lamps[0].material=state==='red'?signalRed:signalBlack;sig.lamps[1].material=state==='yellow'?signalYellow:signalBlack;sig.lamps[2].material=state==='green'?signalGreen:signalBlack;}}
 // Named towns with individual houses, shops, warehouses and street signs. Buildings can collapse when tornadic winds pass.
 const TOWNS=[
  {name:'PINE RIDGE',x:-1500,z:-1000},{name:'SILVER CREEK',x:-600,z:-300},
@@ -280,6 +289,8 @@ function addTownSign(town){
  const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;
  const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:true,depthWrite:false}));sign.position.set(town.x,27,town.z);sign.scale.set(115,21,1);sc.add(sign);
 }
+function addStopSign(x,z,rot=0){const g=new THREE.Group();B(g,.09,2.2,.09,0,1.1,0,poleMat);const oct=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.09,8),M(0xd51f28,{roughness:.7}));oct.rotation.y=Math.PI/8;oct.rotation.x=Math.PI/2;oct.position.set(0,2.05,.03);g.add(oct);const cv=document.createElement('canvas');cv.width=128;cv.height=128;const c=cv.getContext('2d');c.fillStyle='#d51f28';c.beginPath();for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4,r=57;c.lineTo(64+Math.cos(a)*r,64+Math.sin(a)*r)}c.closePath();c.fill();c.strokeStyle='#fff';c.lineWidth=5;c.stroke();c.fillStyle='#fff';c.font='bold 23px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('STOP',64,64);const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;const face=new THREE.Mesh(new THREE.PlaneGeometry(.75,.75),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));face.position.set(0,2.05,.1);g.add(face);g.position.set(x,0,z);g.rotation.y=rot;roadGroup.add(g);}
+for(const town of TOWNS){addStopSign(town.x-140,town.z-8,0);addStopSign(town.x+8,town.z-140,Math.PI/2)}
 function addTownBuilding(town,idx,x,z){
  const commercial=(idx%5===0||idx%7===0),w=commercial?19+Math.random()*9:11+Math.random()*7,d=commercial?17+Math.random()*8:10+Math.random()*7,h=commercial?8+Math.random()*10:4.5+Math.random()*4;
  const walls=[0xb9a17c,0xa89478,0xbabbb0,0x8da8ac,0xb47756,0x728a8d,0xb2aa8c],roofs=[0x403b37,0x713b32,0x303a42,0x575044,0x252d34];
@@ -362,7 +373,7 @@ function updateFrameGizmoVisual(root,part){
  }
 }
 function buildFrameGizmo(g,c,idx){
- const root=new THREE.Group();root.name='SelectedBlockGizmo';root.userData.isFrameGizmo=true;
+ const root=new THREE.Group();root.name='SelectedBlockGizmo';root.userData.isFrameGizmo=true;root.visible=garageOpen&&!Mi.on;
  const colors={x:0xd7dde1,y:0xd7dde1,z:0xd7dde1,corner:0xe8ecef,rotate:0xcbd2d7};
  const mat=(color)=>new THREE.MeshBasicMaterial({color,depthTest:false,transparent:false,toneMapped:false});
  const addRod=(axis,dir,color)=>{const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(1,0,0)]),line=new THREE.Line(geo,new THREE.LineBasicMaterial({color,depthTest:false,transparent:true,opacity:.95,toneMapped:false}));line.userData={gizmoAction:'rod',axis,dir};line.renderOrder=998;root.add(line)};
@@ -443,20 +454,37 @@ function makeCivilian(i){
   const axis=Math.random()<.5?'x':'z',lane=(Math.floor(Math.random()*9)-4)*500+(Math.random()<.5?-2.3:2.3),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
   const x=axis==='x'?along:lane,z=axis==='x'?lane:along,yaw=axis==='x'?(dir>0?0:Math.PI):(dir>0?-Math.PI/2:Math.PI/2);
   g.position.set(x,0,z);g.rotation.y=yaw;sc.add(g);
-  traffic.push({g,x,z,startX:x,startZ:z,axis,lane,dir,speed:5+Math.random()*7,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0});
+  traffic.push({g,x,z,startX:x,startZ:z,axis,lane,dir,speed:5+Math.random()*7,cruiseSpeed:5+Math.random()*7,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0,wait:Math.random()*1.5,stoppedAt:null});
 }
 for(let i=0;i<24;i++)makeCivilian(i);
 function resetTraffic(){for(const v of traffic){v.x=v.startX;v.z=v.startZ;v.rolled=false;v.roll=0;v.vx=v.vz=0;v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0)}}
-function updateTraffic(dt){for(const v of traffic){
+function updateTraffic(dt){
+ const now=performance.now()/1000;
+ for(const v of traffic){
   if(Mi.on&&T){const w=wind(v.x,v.z),windMph=Math.hypot(w.x,w.z)*2.237;
-    if(!v.rolled&&windMph>=81&&w.r<T.R*2.3){v.rolled=true;v.roll=0;if(Mi.rollovers!==undefined)Mi.rollovers++;msg('Civilian traffic rolling over in '+Math.round(windMph)+' mph winds!')}
-    if(v.rolled){v.vx+=w.x*.055*dt;v.vz+=w.z*.055*dt;v.x+=v.vx*dt;v.z+=v.vz*dt;v.roll=Math.min(Math.PI/2,v.roll+dt*(windMph>110?2.8:1.9));v.g.rotation.x=v.roll*(w.x>=0?1:-1);v.g.rotation.y=v.startYaw;v.g.position.set(v.x,.02,v.z);continue}
+   if(!v.rolled&&windMph>=81&&w.r<T.R*2.3){v.rolled=true;v.roll=0;if(Mi.rollovers!==undefined)Mi.rollovers++;msg('Civilian traffic rolling over in '+Math.round(windMph)+' mph winds!')}
+   if(v.rolled){v.vx+=w.x*.055*dt;v.vz+=w.z*.055*dt;v.x+=v.vx*dt;v.z+=v.vz*dt;v.roll=Math.min(Math.PI/2,v.roll+dt*(windMph>110?2.8:1.9));v.g.rotation.x=v.roll*(w.x>=0?1:-1);v.g.rotation.y=v.startYaw;v.g.position.set(v.x,.02,v.z);continue}
   }
+  let target=v.cruiseSpeed, braking=false;
+  // AI braking distance and signal awareness at marked intersections.
+  const along=v.axis==='x'?v.x:v.z, lanePos=v.axis==='x'?v.z:v.x;
+  for(const sig of trafficSignals){
+   if(v.axis!==sig.axis)continue;
+   const sigAlong=v.axis==='x'?sig.x:sig.z, sigLane=v.axis==='x'?sig.z:sig.x;
+   if(Math.abs(lanePos-sigLane)>24)continue;
+   const ahead=(sigAlong-along)*v.dir;
+   if(ahead>0&&ahead<24){const state=signalState(sig,now);if(state==='red'||(state==='yellow'&&ahead>8)){target=Math.min(target,Math.max(0,(ahead-4)*.55));braking=true;if(ahead<5&&target<1)v.stoppedAt=sigAlong}}
+  }
+  // Keep a safe following gap; cars in front reduce speed instead of clipping through one another.
+  for(const other of traffic){if(other===v||other.rolled||other.axis!==v.axis)continue;const laneGap=Math.abs((v.axis==='x'?other.z:other.x)-lanePos);if(laneGap>2.8)continue;const gap=(v.axis==='x'?other.x-v.x:other.z-v.z)*v.dir;if(gap>0&&gap<17){target=Math.min(target,Math.max(0,(gap-5)*.7));braking=true}}
+  // Brief stop at local town-center crossings, then proceed when the crossing is clear.
+  for(const town of TOWNS){const cross=v.axis==='x'?town.x:town.z,otherLane=v.axis==='x'?town.z:town.x;const dist=(cross-along)*v.dir;if(Math.abs(lanePos-otherLane)<155&&dist>0&&dist<10){const blocked=traffic.some(o=>o!==v&&!o.rolled&&o.axis!==v.axis&&Math.hypot(o.x-cross,o.z-(v.axis==='x'?lanePos:cross))<12);if(blocked||dist>4){target=Math.min(target,Math.max(0,(dist-2)*.7));braking=true}}}
+  const accel=braking?11:4;v.speed+=(target-v.speed)*Math.min(1,accel*dt/Math.max(1,v.cruiseSpeed));if(target<.35)v.speed=0;
   v.x+=v.axis==='x'?v.dir*v.speed*dt:0;v.z+=v.axis==='z'?v.dir*v.speed*dt:0;
-  const along=v.axis==='x'?v.x:v.z;if(along>2200){if(v.axis==='x')v.x=-2200;else v.z=-2200;}
-  if(along< -2200){if(v.axis==='x')v.x=2200;else v.z=2200}
+  const pos=v.axis==='x'?v.x:v.z;if(pos>2200){if(v.axis==='x')v.x=-2200;else v.z=-2200;v.speed=v.cruiseSpeed}if(pos< -2200){if(v.axis==='x')v.x=2200;else v.z=2200;v.speed=v.cruiseSpeed}
   v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0);
-}}
+ }
+}
 // aerodynamics model inputs from build
 function stats(k,c){const v=V[k],s=new Set(c.cells),h=(x,y)=>s.has(x+','+y),[a,b]=v.cab.map(f=>f*v.L);let nb=0,nr=0,out=0,cab=0,mt=0;
 c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
@@ -541,7 +569,7 @@ function makeProbe(x,z){const g=new THREE.Group(),metal=M(0xb9c5cc,{metalness:.7
   g.position.set(x,0,z);sc.add(g);return g}
 // ---------- tornado ----------
 const funTex=mkTex(256,128,(x,w,h)=>{x.fillStyle='#8a939a';x.fillRect(0,0,w,h);for(let i=0;i<260;i++){x.fillStyle='rgba('+(Math.random()<.5?'40,46,50':'170,178,184')+','+(.08+Math.random()*.25)+')';x.fillRect(Math.random()*w,0,1+Math.random()*5,h)}});funTex.wrapS=funTex.wrapT=THREE.RepeatWrapping;funTex.repeat.set(3,1);
-const fun=new THREE.Mesh(new THREE.CylinderGeometry(1,.3,1,40,8,true),new THREE.MeshBasicMaterial({map:funTex,color:0xc2c8cc,transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));
+const fun=new THREE.Mesh(new THREE.CylinderGeometry(1,.3,1,40,8,true),new THREE.MeshBasicMaterial({map:funTex,color:0xc2c8cc,transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
 const NP=2600,pa=new Float32Array(NP*3),pg=new Float32Array(NP),ph=new Float32Array(NP),pk=new Float32Array(NP);
 for(let i=0;i<NP;i++){pg[i]=Math.random()*6.28;ph[i]=Math.random();pk[i]=.6+Math.random()*.8}
 const pt=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(pa,3)),new THREE.PointsMaterial({color:0x5b554e,size:3.2,transparent:true,opacity:.85}));pt.frustumCulled=false;
@@ -560,7 +588,7 @@ function syncFreeCamToDriver(c){const dx=c.x-lastFocusDriverX,dz=c.z-lastFocusDr
 function updateFreeCamera(){const d=(garageOpen&&!Mi.on)?garageOrbitDistance:cameraOrbitDistance,pitch=cl(cameraOrbitPitch,.035,1.52),horizontal=d*Math.cos(pitch);cam.position.set(freeCamFocusX+Math.cos(cameraOrbitYaw)*horizontal,freeCamFocusY+d*Math.sin(pitch),freeCamFocusZ+Math.sin(cameraOrbitYaw)*horizontal);cam.lookAt(freeCamFocusX,freeCamFocusY,freeCamFocusZ)}
 function playGame(){S.fuel=START_FUEL;save();gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;cameraOrbitYaw=Math.PI-homeCar.a;cameraOrbitPitch=.34;cameraOrbitDistance=8;garageOrbitDistance=4.2;cameraPanX=0;cameraPanZ=0;car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;car.updateMatrixWorld(true);const startBlock=selectedFrame(cfgOf(S.sel)),focus=car.localToWorld(new THREE.Vector3(startBlock.x,startBlock.y,startBlock.z));setFreeCamFocus(focus.x,focus.y,focus.z);freeCamDetached=false;$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';ui();msg('Welcome to Silver Creek. Starting fuel: 50%. Click and drag a block to move it; use the colored handles to resize, and the vertical-tilt buttons to angle it. The camera follows the vehicle while you drive.')}
 function toggleAllUI(){if(!gameStarted)return;const hidden=document.body.classList.toggle('ui-hidden');$('#uiToggle').textContent=hidden?'SHOW UI [H]':'HIDE UI [H]';}
-function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Double-click a block to select it; drag a colored face, a corner, or the rotate ring.')}else{garageOpen=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
+function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Double-click a block to select it; drag a colored face, a corner, or the rotate ring.')}else{garageOpen=false;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
 function setMapVisible(v){const el=$('#worldMapWrap');el.hidden=!v;$('#mapToggle').textContent=v?'HIDE MAP [M]':'SHOW MAP [M]';if(v)drawWorldMap()}
 function expandMap(){if($('#worldMapWrap').hidden){mapExpanded=true;setMapVisible(true)}else mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);drawWorldMap()}
 function toggleMap(){if(garageOpen&&!Mi.on){setMapVisible(false);return msg('Close the garage workbench before opening the map')}setMapVisible($('#worldMapWrap').hidden)}
@@ -615,12 +643,12 @@ function updateBuildings(dt){
 function updateDebris(dt){for(let i=debrisPieces.length-1;i>=0;i--){const d=debrisPieces[i];d.life-=dt;d.vy-=9.8*dt;d.mesh.position.x+=d.vx*dt;d.mesh.position.z+=d.vz*dt;d.mesh.position.y+=d.vy*dt;d.mesh.rotation.x+=d.spin*dt;d.mesh.rotation.z+=d.spin*.7*dt;if(d.mesh.position.y<.18){d.mesh.position.y=.18;d.vy=Math.max(0,-d.vy*.25);d.vx*=.78;d.vz*=.78}if(d.life<=0){sc.remove(d.mesh);d.mesh.geometry.dispose();debrisPieces.splice(i,1)}}}
 function go(){if(!gameStarted){playGame()}cameraAutoTrackTornado=false;if(sirenEnabled){try{if(!sirenCtx)sirenCtx=new (window.AudioContext||window.webkitAudioContext)();if(sirenCtx.state==='suspended')sirenCtx.resume()}catch(e){}}const k=S.sel,c=cfgOf(k),st=stats(k,c),q=Math.random()*100,e=q<18?0:q<43?1:q<67?2:q<84?3:q<95?4:5,
 rg=[[65,85],[86,110],[111,135],[136,165],[166,200],[201,250]][e],peakMph=rg[0]+Math.random()*(rg[1]-rg[0]),an=Math.random()*6.28,d=620+Math.random()*260;
-T={x:homeCar.x+Math.cos(an)*d,z:homeCar.z+Math.sin(an)*d,R:65+Math.random()*60+e*7,baseR:65+Math.random()*60+e*7,v:Math.max(2,peakMph/2.237*.07),peakV:peakMph/2.237,peakMph,ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:3+Math.random()*3,baseSp:3+Math.random()*3,hail:Math.random()<.6?.45+Math.random()*.55:0,history:[],lastTrail:-10,formTimer:0,formDuration:12+Math.random()*4,formed:false,phase:'SUPERCELL WATCH',baseX:homeCar.x+Math.cos(an)*d,baseZ:homeCar.z+Math.sin(an)*d};
+T={x:homeCar.x+Math.cos(an)*d,z:homeCar.z+Math.sin(an)*d,R:65+Math.random()*60+e*7,baseR:65+Math.random()*60+e*7,v:Math.max(2,peakMph/2.237*.07),peakV:peakMph/2.237,peakMph,ef:e,a:an+Math.PI+(Math.random()-.5)*.8,sp:3+Math.random()*3,baseSp:3+Math.random()*3,hail:Math.random()<.6?.45+Math.random()*.55:0,history:[],lastTrail:-10,formTimer:0,formDuration:6+Math.random()*3,formed:false,phase:'SUPERCELL WATCH',baseX:homeCar.x+Math.cos(an)*d,baseZ:homeCar.z+Math.sin(an)*d};
 T.R0=T.R;T.sp=T.baseSp;T.life=210+Math.random()*180;T.age=0;
 // Initial composition points toward the storm's starting position once; it never auto-locks or follows it afterward.
 const stormDx=T.x-homeCar.x,stormDz=T.z-homeCar.z;cameraOrbitYaw=Math.atan2(-stormDz,-stormDx);cameraOrbitPitch=.22;cameraOrbitDistance=11;freeCamDetached=false;lastFocusDriverX=homeCar.x;lastFocusDriverZ=homeCar.z;
 Mi={on:1,t:0,data:0,hp:100,st,k,rollovers:0,exit:false,player:null,firstPerson,probesLeft:c.probes||0,probes:[],probeCameraIndex:-1,lastCollapseNotice:-10,windHits:c.windshieldHits||0,windshieldBroken:!!c.windshieldBroken,hailHitTimer:0,lightningClock:2+Math.random()*5,lightningFlash:0,car:{x:homeCar.x,z:homeCar.z,a:homeCar.a,s:0,vx:0,vz:0,y:0,anch:0,torn:0,airDeploy:0,spikeDeploy:0}};
-sc.remove(car);car=mk(k,c,false);sc.add(car);car.position.set(Mi.car.x,0,Mi.car.z);fun.visible=false;pt.visible=false;hail.visible=false;lightningBolt.visible=false;resetBuildings();setStormLook(0);
+sc.remove(car);car=mk(k,c,false);sc.add(car);car.position.set(Mi.car.x,0,Mi.car.z);fun.visible=true;pt.visible=true;pt.material.opacity=.22;fun.material.opacity=.38;fun.position.set(T.x,150,T.z);fun.scale.set(T.R*.7,300,T.R*.7);hail.visible=false;lightningBolt.visible=false;resetBuildings();setStormLook(.12);
 $('#pn').hidden=true;garageOpen=false;$('#freeHud').hidden=true;$('#garageBtn').hidden=true;$('#hud').hidden=$('#ar').hidden=false;$('#mapToggle').hidden=false;$('#radarWrap').hidden=false;$('#alarmToggle').hidden=false;$('#worldMapWrap').hidden=false;setMapVisible(false);mapExpanded=false;$('#worldMapWrap').classList.remove('expanded');$('#warningBanner').hidden=false;$('#warningBanner').textContent='SEVERE THUNDERSTORM WATCH · ROTATION DEVELOPING';$('#warningBanner').style.background='#8e5d18e8';msg('Storm watch issued. Rotation is developing; no tornado on the ground yet.');}
 function sp(d){if(!car||!car.userData.sp)return;car.userData.spTarget=d?.4:.95}
 function deployKit(){
@@ -703,7 +731,7 @@ addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=0;if(k=='arrowu
 function mission(dt){
  const c=Mi.car,st=Mi.st,v0=V[Mi.k],cf=cfgOf(Mi.k),arm=1/(1+.7*cf.armor)*(c.airDeploy?.58:1);Mi.t+=dt;T.formTimer+=dt;
  const formation=cl((T.formTimer-3)/(T.formDuration-3),0,1);T.phase=T.formTimer<3?'SUPERCELL WATCH':T.formTimer<T.formDuration?'TORNADO FORMING':'TORNADO WARNING';T.v=T.peakV*(.06+.94*formation);T.R=T.R0*(.48+.52*formation);T.sp=T.baseSp*(.35+.65*formation);T.fade=1;if(T.formed){T.age+=dt;if(T.age>T.life){T.fade=cl(1-(T.age-T.life)/25,0,1);T.phase='ROPING OUT';if(!T.roped){T.roped=1;msg('The tornado is roping out and weakening.');stopSiren()}}}T.v*=T.fade;T.R*=.4+.6*T.fade;
- if(T.formTimer>3){pt.visible=true;pt.material.opacity=.08+.78*cl((T.formTimer-3)/7,0,1)}if(T.formTimer>6){fun.visible=true;fun.material.opacity=(.08+.34*formation)*T.fade}if(!T.formed&&T.formTimer>=T.formDuration){T.formed=true;T.phase='TORNADO WARNING';fun.visible=pt.visible=true;hail.visible=T.hail>0;$('#warningBanner').textContent='TORNADO WARNING · TAKE COVER / INTERCEPT';$('#warningBanner').style.background='#a20f17ed';msg('TORNADO WARNING! Funnel has reached the ground.');startSiren()}
+ pt.visible=true;pt.material.opacity=.18+.68*cl(T.formTimer/6,0,1);fun.visible=true;fun.material.opacity=(.28+.42*cl(T.formTimer/6,0,1))*T.fade;if(!T.formed&&T.formTimer>=T.formDuration){T.formed=true;T.phase='TORNADO WARNING';fun.visible=pt.visible=true;hail.visible=T.hail>0;$('#warningBanner').textContent='TORNADO WARNING · TAKE COVER / INTERCEPT';$('#warningBanner').style.background='#a20f17ed';msg('TORNADO WARNING! Funnel has reached the ground.');startSiren()}
  T.a+=(Math.random()-.5)*.12*dt;T.vx=Math.cos(T.a)*T.sp;T.vz=Math.sin(T.a)*T.sp;T.x+=T.vx*dt;T.z+=T.vz*dt;updatePredictionPath();if(Mi.t-T.lastTrail>.35){T.history.push({x:T.x,z:T.z});if(T.history.length>320)T.history.shift();T.lastTrail=Mi.t}
  const fh=320*(.55+.45*formation);fun.position.set(T.x,fh/2,T.z);fun.scale.set(T.R*1.2,fh,T.R*1.2);fun.rotation.y+=dt*2.2;
  // Lightning flashes occur under the developing storm cloud and illuminate the scene briefly.
@@ -754,7 +782,7 @@ function leave(){const pay=Math.round(Mi.data);Mi.on=0;Mi.probeCameraIndex=-1;S.
 function back(){Mi.probeCameraIndex=-1;if(Mi.k&&Mi.probesLeft!==undefined){cfgOf(Mi.k).probes=Mi.probesLeft+(Mi.probes?Mi.probes.length:0);save()}if(Mi.probes)for(const p of Mi.probes)sc.remove(p.mesh);Mi.probes=[];if(document.pointerLockElement===$('#c')&&document.exitPointerLock)document.exitPointerLock();resetTraffic();$('#res').hidden=true;$('#probeCamToggle').hidden=true;$('#hud').hidden=true;$('#ar').hidden=true;$('#freeHud').hidden=true;$('#radarWrap').hidden=true;$('#alarmToggle').hidden=!gameStarted;$('#warningBanner').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#pn').hidden=false;$('#garageDoorLabel').hidden=true;$('#uiToggle').hidden=false;$('#garageBtn').hidden=false;garageOpen=true;stopSiren();setStormLook(0);rain.visible=false;clouds.visible=false;fun.visible=pt.visible=hail.visible=lightningBolt.visible=false;predictionPath.visible=false;lightningFlash.intensity=0;homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;rebuild();car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;cameraOrbitYaw=Math.PI-homeCar.a;cameraOrbitPitch=.34;garageOrbitDistance=4.2;setFreeCamFocus(homeCar.x,1.5,homeCar.z);garageOpen=true;ui()}
 function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(Mi.on||gameStarted)drawWorldMap()}addEventListener('resize',size);size();
 let last=0,gt=0;(function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1e3||.016);last=t;updateDebris(dt);updateDeployAnimation(dt);
-if(Mi.on)mission(dt);else{updateTraffic(dt);updateFreeDrive(dt);if(!gameStarted){gt+=dt*.4;cam.position.set(HOME.x+Math.cos(gt)*12,6,HOME.z+Math.sin(gt)*12);cam.lookAt(HOME.x,1,HOME.z)}}
+updateSignals(dt);if(Mi.on)mission(dt);else{updateTraffic(dt);updateFreeDrive(dt);if(!gameStarted){gt+=dt*.4;cam.position.set(HOME.x+Math.cos(gt)*12,6,HOME.z+Math.sin(gt)*12);cam.lookAt(HOME.x,1,HOME.z)}}
 sky.position.copy(cam.position);{const sx=Math.round(freeCamFocusX),sz=Math.round(freeCamFocusZ);sun.target.position.set(sx,0,sz);sun.position.set(sx+500,900,sz+300)}R.render(sc,cam)})(0);
 // Start positioned at the in-town garage, with the editor hidden behind the intro until PLAY is pressed.
 const _rebuild=rebuild;rebuild=function(){_rebuild();if(car){car.position.set(Mi.on&&Mi.car?Mi.car.x:homeCar.x,0,Mi.on&&Mi.car?Mi.car.z:homeCar.z);car.rotation.y=Mi.on&&Mi.car?Mi.car.a:homeCar.a}};
