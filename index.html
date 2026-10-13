@@ -385,8 +385,8 @@ function buildFrameGizmo(g,c,idx){
 }
 // builds each selected dealer vehicle from its dimensions, configuration and styling.
 function mk(k,c,dep){
-const v=V[k],g=new THREE.Group(),L=v.L,W=v.W,H=v.H,cfg=c,bd=M(c.wrapColor?parseInt(c.wrapColor.slice(1),16):v.c),gl=M(0x101c23,{metalness:.25,roughness:.22}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
-const shell=new THREE.Group();g.add(shell);B(g,L*.82,.15,W*.72,0,.39,0,M(0x252b30,{metalness:.55,roughness:.72}));B(g,L*.48,.11,.12,0,.42,W*.29,M(0x252b30));B(g,L*.48,.11,.12,0,.42,-W*.29,M(0x252b30));
+const v=V[k],g=new THREE.Group(),bodyGroup=new THREE.Group(),L=v.L,W=v.W,H=v.H,cfg=c,bd=M(c.wrapColor?parseInt(c.wrapColor.slice(1),16):v.c),gl=M(0x101c23,{metalness:.25,roughness:.22}),[a,b]=v.cab.map(f=>f*L),cw=b-a,cx=(a+b)/2,ch=H-1.03;
+g.add(bodyGroup);g.userData.suspensionBody=bodyGroup;const shell=new THREE.Group();bodyGroup.add(shell);B(bodyGroup,L*.82,.15,W*.72,0,.39,0,M(0x252b30,{metalness:.55,roughness:.72}));B(bodyGroup,L*.48,.11,.12,0,.42,W*.29,M(0x252b30));B(bodyGroup,L*.48,.11,.12,0,.42,-W*.29,M(0x252b30));
 const lx=v.t?a:-L/2;B(shell,L/2-lx,.62,W,(lx+L/2)/2,.72,0,bd);
 B(shell,cw,ch,W*.94,cx,1.03+ch/2,0,bd);B(shell,cw*1.01,ch*.55,W*.97,cx,1.03+ch*.62,0,gl);
 if(v.t){B(shell,a+L/2,.12,W,(a-L/2)/2,.82,0,bd);for(const s of[-1,1])B(shell,a+L/2,.5,.1,(a-L/2)/2,1.06,s*(W/2-.05),bd);B(shell,.1,.5,W,-L/2,1.06,0,bd)}
@@ -411,34 +411,35 @@ if(c.frameEnabled!==false&&Array.isArray(c.frameCubes)&&c.frameCubes.length){
    cube.userData.frameCubeIndex=index;
    const fm=M(baseColor,{metalness:.28,roughness:.48,emissive:chosen?baseColor:0x000000,emissiveIntensity:chosen?.055:0});
    const solid=new THREE.Mesh(makeSolidBlockGeometry(Lf,Hf,Wf,(Number(part.roundness)||0)*100),fm);solid.castShadow=true;solid.receiveShadow=true;solid.userData.frameCubeIndex=index;cube.add(solid);
-   // Thin 12-edge outline only on the selected solid block; double-click in the scene selects a block.
+   // Thin 12-edge outline only on the selected solid block; click/drag selects, Alt-click cycles overlapping blocks.
    const edgeGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(Lf+.018,Hf+.018,Wf+.018));
    const edgeMat=new THREE.LineBasicMaterial({color:chosen?0xffffff:0x18232a,transparent:true,opacity:chosen?.98:.2,depthTest:true});
    const outline=new THREE.LineSegments(edgeGeo,edgeMat);outline.userData.frameCubeIndex=index;cube.add(outline);
    cube.position.set(Number(part.x)||0,Number.isFinite(Number(part.y))?Number(part.y):((v.H||1.9)+.22),Number(part.z)||0);cube.rotation.set((Number(part.rotationV)||0)*Math.PI/180,(Number(part.rotation)||0)*Math.PI/180,0);frameRoot.add(cube);
  });
- g.add(frameRoot);g.userData.cubeFrame=frameRoot;if(dep)buildFrameGizmo(g,c,selIndex);
+ bodyGroup.add(frameRoot);g.userData.cubeFrame=frameRoot;if(dep)buildFrameGizmo(g,c,selIndex);
 }
 // Optional team lettering and a user-supplied image are rendered as side livery decals.
 if(c.wrapText||c.wrapImageData){const cv=document.createElement('canvas');cv.width=512;cv.height=192;const cx2=cv.getContext('2d');if(c.wrapImageData){const im=new Image();im.onload=()=>{cx2.drawImage(im,0,0,512,192);if(c.wrapText){cx2.fillStyle='#ffffff';cx2.strokeStyle='#10202b';cx2.lineWidth=7;cx2.font='900 42px Impact,Verdana';cx2.textAlign='center';cx2.strokeText(c.wrapText.slice(0,28),256,170);cx2.fillText(c.wrapText.slice(0,28),256,170)}liveryTex.needsUpdate=true};im.src=c.wrapImageData}else{cx2.fillStyle='rgba(10,20,28,.7)';cx2.fillRect(10,42,492,106);cx2.fillStyle='#fff';cx2.strokeStyle='#14232b';cx2.lineWidth=6;cx2.font='900 44px Impact,Verdana';cx2.textAlign='center';cx2.strokeText(c.wrapText.slice(0,28),256,105);cx2.fillText(c.wrapText.slice(0,28),256,105)}const liveryTex=new THREE.CanvasTexture(cv);liveryTex.encoding=THREE.sRGBEncoding;const lm=new THREE.MeshBasicMaterial({map:liveryTex,transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const side of[-1,1]){const decal=new THREE.Mesh(new THREE.PlaneGeometry(L*.58,.48),lm);decal.position.set(-.05,1.06,side*(W/2+.018));decal.rotation.y=side<0?Math.PI:0;shell.add(decal)}}
 if(c.chassisOnly)shell.visible=false;
 const n=c.armor;if(n){const st=M(new THREE.Color().setHSL(.58,.12,.55-n*.07).getHex(),{metalness:.7});
-B(g,L*.8,.5,W+.1,0,.75,0,st);
-if(n>1){B(g,.35,.5,W+.1,L/2,.7,0,st);B(g,.35,.5,W+.1,-L/2,.7,0,st);B(g,L/2-b,.08,W*.98,(b+L/2)/2,1.06,0,st)}
-if(n>2){B(g,cw+.1,.1,W,cx,H+.05,0,st);B(g,cw*.95,ch*.5,W+.1,cx,1.03+ch*.3,0,st)}
-if(n>3)for(let i=0;i<5;i++)B(g,.06,ch*.55,W+.05,a+cw*(i+.5)/5,1.03+ch*.62,0,st)}
-if(c.hg){const m=M(0x9fb0ba),y=H+.3;for(let i=0;i<=6;i++)B(g,.04,.04,W*1.02,a+cw*i/6,y,0,m);for(let j=0;j<=3;j++)B(g,cw*1.05,.04,.04,cx,y,-W/2+W*j/3,m);for(const x of[a,b])for(const s of[-1,1])B(g,.05,.3,.05,x,H+.15,s*W/2*.97,m)}
+B(bodyGroup,L*.8,.5,W+.1,0,.75,0,st);
+if(n>1){B(bodyGroup,.35,.5,W+.1,L/2,.7,0,st);B(bodyGroup,.35,.5,W+.1,-L/2,.7,0,st);B(bodyGroup,L/2-b,.08,W*.98,(b+L/2)/2,1.06,0,st)}
+if(n>2){B(bodyGroup,cw+.1,.1,W,cx,H+.05,0,st);B(bodyGroup,cw*.95,ch*.5,W+.1,cx,1.03+ch*.3,0,st)}
+if(n>3)for(let i=0;i<5;i++)B(bodyGroup,.06,ch*.55,W+.05,a+cw*(i+.5)/5,1.03+ch*.62,0,st)}
+if(c.hg){const m=M(0x9fb0ba),y=H+.3;for(let i=0;i<=6;i++)B(bodyGroup,.04,.04,W*1.02,a+cw*i/6,y,0,m);for(let j=0;j<=3;j++)B(bodyGroup,cw*1.05,.04,.04,cx,y,-W/2+W*j/3,m);for(const x of[a,b])for(const s of[-1,1])B(bodyGroup,.05,.3,.05,x,H+.15,s*W/2*.97,m)}
 const sp=new THREE.Group(),sm=M(0xcfd6db,{metalness:.9});
 for(let i=0;i<c.spk*4;i++){const q=new THREE.Mesh(SG,sm),r=i<4;q.position.set([1,1,-1,-1][i%4]*L*(r?.38:.14),dep?.4:.95,[1,-1,1,-1][i%4]*(W/2-.25));sp.add(q)}
-g.add(sp);g.userData.sp=sp;
+bodyGroup.add(sp);g.userData.sp=sp;
 const fm=M(parseInt((c.frameColor||'#e0701c').slice(1),16),{metalness:.6}),h=new Set(c.cells);
 if(!(c.frameSize||0))c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
-for(const s of[-1,1])B(g,CS,CS,.1,wx,wy,s*(W/2+.07),fm);
-if(!h.has(x+','+(y+1)))B(g,CS,.09,W+.14,wx,wy+CS/2,0,fm);
-if(!h.has((x+1)+','+y))B(g,.09,CS,W+.14,wx+CS/2,wy,0,fm)});
+for(const s of[-1,1])B(bodyGroup,CS,CS,.1,wx,wy,s*(W/2+.07),fm);
+if(!h.has(x+','+(y+1)))B(bodyGroup,CS,.09,W+.14,wx,wy+CS/2,0,fm);
+if(!h.has((x+1)+','+y))B(bodyGroup,.09,CS,W+.14,wx+CS/2,wy,0,fm)});
 const bagGroup=new THREE.Group(),bagMat=M(0xffb34f,{roughness:.65,metalness:0});
-for(const xx of[-1,1])for(const zz of[-1,1]){const bag=new THREE.Mesh(new THREE.SphereGeometry(1,12,10),bagMat);bag.scale.set(.62,.55,.42);bag.position.set(xx*L*.31,.86,zz*(W*.5+.28));bagGroup.add(bag)}
-bagGroup.visible=false;g.add(bagGroup);g.userData.airbags=bagGroup;
+// Deployable air pads sit beneath the chassis, inboard of the tires, so their color never overlays the tire surfaces.
+for(const xx of[-1,1])for(const zz of[-1,1]){const bag=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),bagMat);bag.scale.set(.48,.20,.30);bag.position.set(xx*L*.32,.55,zz*W*.22);bagGroup.add(bag)}
+bagGroup.visible=false;bodyGroup.add(bagGroup);g.userData.airbags=bagGroup;
 if(!dep){const hl=new THREE.SpotLight(0xfff0cf,1.5,130,.55,.6,1.2);hl.position.set(L/2,1,0);hl.target.position.set(L/2+40,0,0);g.add(hl,hl.target)}g.rotation.order='YXZ';return g}
 // Civilian sedans, minivans and pickups cruise on the roads and can be rolled by strong tornado winds.
 const traffic=[];
@@ -588,7 +589,7 @@ function syncFreeCamToDriver(c){const dx=c.x-lastFocusDriverX,dz=c.z-lastFocusDr
 function updateFreeCamera(){const d=(garageOpen&&!Mi.on)?garageOrbitDistance:cameraOrbitDistance,pitch=cl(cameraOrbitPitch,.035,1.52),horizontal=d*Math.cos(pitch);cam.position.set(freeCamFocusX+Math.cos(cameraOrbitYaw)*horizontal,freeCamFocusY+d*Math.sin(pitch),freeCamFocusZ+Math.sin(cameraOrbitYaw)*horizontal);cam.lookAt(freeCamFocusX,freeCamFocusY,freeCamFocusZ)}
 function playGame(){S.fuel=START_FUEL;save();gameStarted=true;$('#intro').hidden=true;$('#pn').hidden=false;garageOpen=true;$('#uiToggle').hidden=false;$('#uiToggle').textContent='HIDE UI [H]';document.body.classList.remove('ui-hidden');$('#garageBtn').hidden=false;$('#alarmToggle').hidden=true;$('#radarWrap').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#garageDoorLabel').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;setMapVisible(false);homeCar.x=HOME.x-8;homeCar.z=HOME.z;homeCar.a=HOME.a;homeCar.s=0;cameraOrbitYaw=Math.PI-homeCar.a;cameraOrbitPitch=.34;cameraOrbitDistance=8;garageOrbitDistance=4.2;cameraPanX=0;cameraPanZ=0;car.position.set(homeCar.x,0,homeCar.z);car.rotation.y=homeCar.a;car.updateMatrixWorld(true);const startBlock=selectedFrame(cfgOf(S.sel)),focus=car.localToWorld(new THREE.Vector3(startBlock.x,startBlock.y,startBlock.z));setFreeCamFocus(focus.x,focus.y,focus.z);freeCamDetached=false;$('#radarMode').textContent='STANDBY';$('#freeHud').innerHTML='Silver Creek · Garage bay<br>Fuel: '+Math.round(S.fuel)+'%';ui();msg('Welcome to Silver Creek. Starting fuel: 50%. Click and drag a block to move it; use the colored handles to resize, and the vertical-tilt buttons to angle it. The camera follows the vehicle while you drive.')}
 function toggleAllUI(){if(!gameStarted)return;const hidden=document.body.classList.toggle('ui-hidden');$('#uiToggle').textContent=hidden?'SHOW UI [H]':'HIDE UI [H]';}
-function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Double-click a block to select it; drag a colored face, a corner, or the rotate ring.')}else{garageOpen=false;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
+function toggleGarage(){if(!gameStarted)return; if(Mi.on)return msg('Garage workbench is unavailable during an intercept');if(!garageOpen){const d=Math.hypot(homeCar.x-HOME.x,homeCar.z-HOME.z);if(d>95)return msg('Drive back to the marked home garage first');garageOpen=true;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=true;setMapVisible(false);$('#pn').hidden=false;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;garageOrbitDistance=Math.min(garageOrbitDistance,4.2);car.updateMatrixWorld(true);const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Garage workbench opened. Click and drag a cube to move it; Alt-click cycles overlapping cubes. Use PREV/NEXT to select any cube; drag a face, corner, or rotate ring to edit.')}else{garageOpen=false;if(car&&car.userData.frameGizmo)car.userData.frameGizmo.visible=false;setFreeCamFocus(homeCar.x,(homeCar.y||0)+1.45,homeCar.z);$('#pn').hidden=true;$('#radarWrap').hidden=false;$('#mapToggle').hidden=false;$('#alarmToggle').hidden=false;$('#garageDoorLabel').hidden=true;msg('Garage closed. Drive with W/S and A/D')} }
 function setMapVisible(v){const el=$('#worldMapWrap');el.hidden=!v;$('#mapToggle').textContent=v?'HIDE MAP [M]':'SHOW MAP [M]';if(v)drawWorldMap()}
 function expandMap(){if($('#worldMapWrap').hidden){mapExpanded=true;setMapVisible(true)}else mapExpanded=!mapExpanded;$('#worldMapWrap').classList.toggle('expanded',mapExpanded);drawWorldMap()}
 function toggleMap(){if(garageOpen&&!Mi.on){setMapVisible(false);return msg('Close the garage workbench before opening the map')}setMapVisible($('#worldMapWrap').hidden)}
@@ -600,7 +601,7 @@ function updateRadar(){const cv=$('#radar');if(!cv||$('#radarWrap').hidden)retur
 const player=Mi.on&&Mi.car?Mi.car:homeCar;if(T&&(Mi.on||T.formingForMap)){const dx=T.x-player.x,dz=T.z-player.z,scale=R0/1000,xx=cx+dx*scale,yy=cy+dz*scale;if(Math.hypot(dx,dz)<1000){ctx.fillStyle=T.formed?'#ff4c48':'#ffd86a';ctx.beginPath();ctx.arc(xx,yy,T.formed?7:5,0,Math.PI*2);ctx.fill();if(T.formed){ctx.strokeStyle='#ff514b';ctx.beginPath();ctx.arc(xx,yy,12,0,Math.PI*2);ctx.stroke()}}}
 for(const station of gasStations){const dx=station.x-player.x,dz=station.z-player.z,scale=R0/1000;if(Math.hypot(dx,dz)<1000){ctx.fillStyle='#f8d95c';ctx.fillRect(cx+dx*scale-3,cy+dz*scale-3,6,6)}}ctx.fillStyle='#9af8bd';ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();$('#radarMode').textContent=Mi.on?(T&&T.formed?'TORNADO':'STORM WATCH'):'STANDBY';$('#radarInfo').textContent=Mi.on&&T?`${T.phase||'Storm'} · ${Math.round(T.v*2.237)} mph max wind`:'Local scan · gas stations marked yellow'}
 function refuelAtStation(){const carPos=Mi.on?Mi.car:homeCar;if(Math.abs(carPos.s||0)>2)return msg('Stop near the pump before refueling');const near=gasStations.reduce((best,g)=>{const d=Math.hypot(g.x-carPos.x,g.z-carPos.z);return d<best.d?{g,d}:best},{g:null,d:Infinity});if(!near.g||near.d>38)return msg('No gas station nearby. Find a yellow gas marker on the map.');if(S.fuel>=99)return msg('Fuel tank is already full');if(S.cr<500)return msg('Need 500 credits to fill the tank');S.cr-=500;S.fuel=100;save();ui();msg('Refueled at '+near.g.name)}
-function updateDeployAnimation(dt){if(!car||!car.userData)return;const bags=car.userData.airbags;if(bags){const target=car.userData.airTarget||0;const value=bags.scale.x;const next=value+(target-value)*Math.min(1,dt*5);bags.scale.setScalar(next);if(target===0&&next<.025){bags.visible=false;bags.scale.setScalar(.01)}}const sg=car.userData.sp;if(sg){const target=car.userData.spTarget===undefined?.95:car.userData.spTarget;for(const q of sg.children)q.position.y+=(target-q.position.y)*Math.min(1,dt*7)}}
+function updateDeployAnimation(dt){if(!car||!car.userData)return;const bags=car.userData.airbags,airTarget=car.userData.airTarget||0;if(bags){const target=airTarget;const value=bags.scale.x;const next=value+(target-value)*Math.min(1,dt*5);bags.scale.setScalar(next);if(target===0&&next<.025){bags.visible=false;bags.scale.setScalar(.01)}}const body=car.userData.suspensionBody;if(body){const targetY=airTarget>0.5?-.30:0,delta=targetY-body.position.y;body.position.y+=delta*Math.min(1,dt*4.5);if(Math.abs(delta)<.006)body.position.y=targetY}const sg=car.userData.sp;if(sg){const target=car.userData.spTarget===undefined?.95:car.userData.spTarget;for(const q of sg.children)q.position.y+=(target-q.position.y)*Math.min(1,dt*7)}}
 const homeCar={x:HOME.x-8,z:HOME.z,a:HOME.a,s:0,vx:0,vz:0,y:0};
 let fuelSaveClock=0;function updateFreeDrive(dt){if(!gameStarted||Mi.on)return;const c=homeCar,oldX=c.x,oldZ=c.z;fuelSaveClock+=dt;if(fuelSaveClock>6){save();fuelSaveClock=0}if(!garageOpen){const throttle=(keys.w?1:0)-(keys.s?1:0);if(S.fuel<=0&&throttle!==0){c.s=0;if(!Mi.noFuelNotice){msg('Out of fuel. Find a gas station.');Mi.noFuelNotice=true}}else{Mi.noFuelNotice=false;c.s+=throttle*7*dt;c.s*=Math.exp(-.22*dt);c.s=cl(c.s,-8,27);if(Math.abs(c.s)>.1)S.fuel=Math.max(0,S.fuel-Math.abs(c.s)*dt*.008)}c.a+=((keys.a?1:0)-(keys.d?1:0))*dt*Math.min(1,Math.abs(c.s)/5)*.9*Math.sign(c.s||1);c.x+=Math.cos(c.a)*c.s*dt;c.z+=-Math.sin(c.a)*c.s*dt;collideCar(c,V[S.sel].L,V[S.sel].W);c.rx=(c.rx||0)+(((keys.a?1:0)-(keys.d?1:0))*c.s*.0022-(c.rx||0))*Math.min(1,dt*5);c.pz=(c.pz||0)+(throttle*.012-(c.pz||0))*Math.min(1,dt*4);car.position.set(c.x,0,c.z);car.rotation.y=c.a;car.rotation.x=cl(c.rx,-.05,.05);car.rotation.z=c.pz}
 if(!garageOpen){syncFreeCamToDriver(c)}if(firstPerson&&!garageOpen){const fx=Math.cos(c.a+cameraOrbitYaw),fz=-Math.sin(c.a+cameraOrbitYaw),pitchOffset=cameraOrbitPitch-.38;cam.position.set(c.x+Math.cos(c.a)*.25,1.45,c.z-Math.sin(c.a)*.25);cam.lookAt(c.x+fx*25,1.45+Math.sin(pitchOffset)*25,c.z+fz*25)}else if(gameStarted){updateFreeCamera()}
@@ -674,9 +675,28 @@ function toggleProbeCamera(){if(!Mi.on)return;if(!Mi.probes||!Mi.probes.length)r
 const worldCanvas=$('#c');
 worldCanvas.addEventListener('contextmenu',e=>e.preventDefault());
 function hitTestFrameGizmo(e){if(!car||!car.userData.frameGizmo||!garageOpen||Mi.on)return null;const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(ndc,cam);const hits=ray.intersectObjects(car.userData.frameGizmo.children,true);return hits.find(h=>h.object.userData&&h.object.userData.gizmoHandle)||null}
-function hitTestFrameBlock(e){if(!car||!car.userData.cubeFrame||!garageOpen||Mi.on)return null;const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(ndc,cam);const hits=ray.intersectObjects(car.userData.cubeFrame.children,true);for(const hit of hits){let obj=hit.object;while(obj&&obj.userData.frameCubeIndex===undefined)obj=obj.parent;if(obj&&obj.userData.frameCubeIndex!==undefined)return obj.userData.frameCubeIndex}return null}
+function hitTestFrameBlock(e,cycleOverlap=true){
+ if(!car||!car.userData.cubeFrame||!garageOpen||Mi.on)return null;
+ const rect=worldCanvas.getBoundingClientRect(),ndc=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1),ray=new THREE.Raycaster();
+ ray.setFromCamera(ndc,cam);
+ const hits=ray.intersectObjects(car.userData.cubeFrame.children,true),byCube=new Map(),parts=cfgOf(S.sel).frameCubes||[];
+ // Raycaster reports hits through occluding meshes too. Collect every cube crossed by
+ // the ray instead of blindly accepting the outside cube's first surface hit.
+ for(const hit of hits){
+  let obj=hit.object;while(obj&&obj.userData.frameCubeIndex===undefined)obj=obj.parent;
+  if(!obj||obj.userData.frameCubeIndex===undefined)continue;
+  const idx=obj.userData.frameCubeIndex,old=byCube.get(idx);
+  if(!old||hit.distance<old.distance){const part=parts[idx]||{},volume=Math.max(FRAME_MIN,Number(part.l)||FRAME_BASE)*Math.max(FRAME_MIN,Number(part.w)||FRAME_BASE)*Math.max(FRAME_MIN,Number(part.h)||FRAME_BASE);byCube.set(idx,{idx,distance:hit.distance,volume})}
+ }
+ const candidates=[...byCube.values()].sort((a,b)=>a.volume-b.volume||a.distance-b.distance);
+ if(!candidates.length)return null;
+ // Alt-click cycles through all cubes intersected at the cursor, including cubes
+ // hidden inside other frame hitboxes. Normal selection favors the smallest cube.
+ if(cycleOverlap&&e.altKey&&candidates.length>1){const selected=cfgOf(S.sel).frameSelected,at=candidates.findIndex(q=>q.idx===selected);return candidates[(at+1+candidates.length)%candidates.length].idx}
+ return candidates[0].idx;
+}
 function cubeWorldCenter(p){car.updateMatrixWorld(true);return car.localToWorld(new THREE.Vector3(p.x,p.y,p.z))}
-worldCanvas.addEventListener('dblclick',e=>{if(!gameStarted||Mi.on||!garageOpen||!car||!car.userData.cubeFrame)return;const idx=hitTestFrameBlock(e);if(idx===null)return;const c=cfgOf(S.sel);c.frameSelected=idx;rebuild();ui();save();const p=selectedFrame(c),f=cubeWorldCenter(p);garageOrbitDistance=Math.min(garageOrbitDistance,4.2);setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Cube '+(idx+1)+' selected · white outline and resize/rotate handles active');e.preventDefault()});
+worldCanvas.addEventListener('dblclick',e=>{if(!gameStarted||Mi.on||!garageOpen||!car||!car.userData.cubeFrame)return;const idx=hitTestFrameBlock(e,false);if(idx===null)return;const c=cfgOf(S.sel);c.frameSelected=idx;rebuild();ui();save();const p=selectedFrame(c),f=cubeWorldCenter(p);garageOrbitDistance=Math.min(garageOrbitDistance,4.2);setFreeCamFocus(f.x,f.y,f.z);freeCamDetached=false;msg('Cube '+(idx+1)+' selected · white outline and resize/rotate handles active');e.preventDefault()});
 const FRAME_HANDLE_MAX={l:7,w:4.5,h:4.5};
 function localAxis(axis,rotation,rotationV=0){const v=axis==='x'?new THREE.Vector3(1,0,0):axis==='z'?new THREE.Vector3(0,0,1):new THREE.Vector3(0,1,0);return v.applyEuler(new THREE.Euler((Number(rotationV)||0)*Math.PI/180,(Number(rotation)||0)*Math.PI/180,0,'XYZ'))}
 function projectedAxisPixels(axis,p){car.updateMatrixWorld(true);const base=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z)),rot=car.rotation.y,vec=localAxis(axis,p.rotation,p.rotationV).applyAxisAngle(new THREE.Vector3(0,1,0),rot),a=base.clone().project(cam),b=base.clone().add(vec).project(cam),rect=worldCanvas.getBoundingClientRect();return{x:(b.x-a.x)*rect.width/2,y:-(b.y-a.y)*rect.height/2}}
