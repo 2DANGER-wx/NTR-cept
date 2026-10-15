@@ -1,8 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>NTR-CEPT — Storm Interception Simulator</title>
 <style>
-:root{--bg:#000000;--pn:#050505f7;--tx:#f0f0f0;--mu:#a0a0a0;--ac:#ff7a2f;--ok:#58d68d;--bd:#ff5a5a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14232b}}
-:root[data-theme="dark"]{--bg:#14232b}
+:root{--bg:#000000;--pn:#030303;--tx:#f0f0f0;--mu:#a0a0a0;--ac:#ff7a2f;--ok:#58d68d;--bd:#ff5a5a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme="dark"]{--bg:#000000;--pn:#030303}
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
 body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.4 Verdana,Tahoma,sans-serif;overflow:hidden}
 canvas#c{position:fixed;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}canvas#c:active{cursor:grabbing}
@@ -347,7 +346,6 @@ function makeSolidBlockGeometry(length,height,width,roundPercent){
  }
  pos.needsUpdate=true;norm.needsUpdate=true;geo.computeBoundingSphere();return geo;
 }
-// PHASE 1: preserve the existing road grid and traffic logic; keep roadside props clear of asphalt.
 // A simple road grid makes the environment navigable and gives civilian traffic lanes.
 const roadGroup=new THREE.Group();sc.add(roadGroup);
 const asphalt=M(0x292d30,{roughness:1,metalness:0}),roadWhite=M(0xd6d8ce,{roughness:.95,metalness:0}),roadYellow=M(0xd5a92e,{roughness:.95,metalness:0}),roadShoulder=M(0x59574f,{roughness:1,metalness:0});
@@ -363,17 +361,9 @@ const ROAD_SPAN=8600; for(let p=-4000;p<=4000;p+=500){
 // Street lighting and signalized intersections along the main road grid.
 const streetLights=[],trafficSignals=[];
 const poleMat=M(0x343b40,{roughness:.8,metalness:.45}),lampMat=M(0xffedb0,{emissive:0x665522,roughness:.3}),signalBlack=M(0x171b1f,{roughness:.7}),signalRed=M(0xd92525,{emissive:0x550000}),signalYellow=M(0xf5bd2e,{emissive:0x4b3200}),signalGreen=M(0x27d36a,{emissive:0x064a20});
-function addStreetLight(x,z,alongX=false){const g=new THREE.Group();B(g,.16,7,.16,0,3.5,0,poleMat);B(g,2.1,.12,.12,alongX?-.75:0,6.8,alongX?0:-.75,poleMat);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),lampMat);bulb.position.set(alongX?-1.65:0,6.65,alongX?0:-1.65);g.add(bulb);g.position.set(x,0,z);roadGroup.add(g);streetLights.push({g,bulb})}
-function addTrafficSignal(x,z,axis='x') {
- // Keep the pole on the outside shoulder, while the mast arm carries the signal head over the approach lanes.
- const g=new THREE.Group(),poleOffset=axis==='x'?9:9,headOffset=axis==='x'?-7.5: -7.5;
- B(g,.16,6.2,.16,poleOffset,3.1,0,poleMat);
- if(axis==='x')B(g,8.8,.16,.16,poleOffset-4.4,6.0,0,poleMat);else B(g,.16,.16,8.8,0,6.0,poleOffset-4.4,poleMat);
- const head=new THREE.Group();B(head,.82,1.85,.48,0,5.0,0,signalBlack);const lamps=[];
- for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.19,10,8),[signalRed,signalYellow,signalGreen][i]);m.position.set(0,5.58-i*.56,.255);head.add(m);lamps.push(m)}
- head.position.set(axis==='x'?headOffset:0,0,axis==='z'?headOffset:0);g.add(head);g.position.set(x,0,z);roadGroup.add(g);trafficSignals.push({x,z,axis,g,lamps,offset:Math.random()*20});
-}
-for(let p=-4000;p<=4000;p+=500){for(let z=-4000;z<=4000;z+=1000)addStreetLight(p+18,z+18,true);}
+function addStreetLight(x,z,alongX=false){if([-3000,-1500,0,1500,3000].some(hz=>Math.abs(z-hz)<25))return;const g=new THREE.Group();B(g,.16,7,.16,0,3.5,0,poleMat);B(g,2.1,.12,.12,alongX?-.75:0,6.8,alongX?0:-.75,poleMat);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),lampMat);bulb.position.set(alongX?-1.65:0,6.65,alongX?0:-1.65);g.add(bulb);g.position.set(x,0,z);roadGroup.add(g);streetLights.push({g,bulb})}
+function addTrafficSignal(x,z,axis='x') {if([-3000,-1500,0,1500,3000].some(hz=>Math.abs(z-hz)<38))return;const g=new THREE.Group();B(g,.12,5.5,.12,0,2.75,0,poleMat);B(g,.72,1.8,.38,0,5.1,0,signalBlack);const lamps=[];for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.19,10,8),[signalRed,signalYellow,signalGreen][i]);m.position.set(0,5.65-i*.55,.22);g.add(m);lamps.push(m)}g.position.set(x,0,z);roadGroup.add(g);trafficSignals.push({x,z,axis,g,lamps,offset:Math.random()*20});}
+for(let p=-4000;p<=4000;p+=500){for(let z=-4000;z<=4000;z+=1000)addStreetLight(p+15,z+15,true);}
 for(let x=-4000;x<=4000;x+=1000)for(let z=-4000;z<=4000;z+=1000){addTrafficSignal(x+15,z+15,'x');addTrafficSignal(x-15,z-15,'z')}
 function signalState(sig,t){
  // Heads at the same intersection share a cycle; perpendicular approaches alternate right-of-way.
@@ -400,7 +390,7 @@ function addTownSign(town){
  const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:true,depthWrite:false}));sign.position.set(town.x,27,town.z);sign.scale.set(115,21,1);sc.add(sign);
 }
 const stopSignOctGeo=new THREE.CylinderGeometry(.43,.43,.09,8),stopSignFaceGeo=new THREE.PlaneGeometry(.75,.75),stopSignMaterial=M(0xd51f28,{roughness:.7}),stopSignFaceTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=128;const c=cv.getContext('2d');c.fillStyle='#d51f28';c.beginPath();for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4,r=57;c.lineTo(64+Math.cos(a)*r,64+Math.sin(a)*r)}c.closePath();c.fill();c.strokeStyle='#fff';c.lineWidth=5;c.stroke();c.fillStyle='#fff';c.font='bold 23px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('STOP',64,64);const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;return tex})(),stopSignFaceMaterial=new THREE.MeshBasicMaterial({map:stopSignFaceTex,transparent:true,side:THREE.DoubleSide});
-function addStopSign(x,z,rot=0){const g=new THREE.Group();B(g,.09,2.2,.09,0,1.1,0,poleMat);const oct=new THREE.Mesh(stopSignOctGeo,stopSignMaterial);oct.rotation.y=Math.PI/8;oct.rotation.x=Math.PI/2;oct.position.set(0,2.05,.03);g.add(oct);const face=new THREE.Mesh(stopSignFaceGeo,stopSignFaceMaterial);face.position.set(0,2.05,.1);g.add(face);g.position.set(x,0,z);g.rotation.y=rot;roadGroup.add(g)}
+function addStopSign(x,z,rot=0){if([-3000,-1500,0,1500,3000].some(hz=>Math.abs(z-hz)<34))return;const g=new THREE.Group();B(g,.09,2.2,.09,0,1.1,0,poleMat);const oct=new THREE.Mesh(stopSignOctGeo,stopSignMaterial);oct.rotation.y=Math.PI/8;oct.rotation.x=Math.PI/2;oct.position.set(0,2.05,.03);g.add(oct);const face=new THREE.Mesh(stopSignFaceGeo,stopSignFaceMaterial);face.position.set(0,2.05,.1);g.add(face);g.position.set(x,0,z);g.rotation.y=rot;roadGroup.add(g)}
 // Unsignalized regional intersections get four STOP signs; intersections with lights use the signal heads instead.
 for(let sx=-4000;sx<=4000;sx+=500)for(let sz=-4000;sz<=4000;sz+=500){if(sx%1000===0&&sz%1000===0)continue;addStopSign(sx-14,sz-14,-Math.PI/2);addStopSign(sx+14,sz+14,Math.PI/2);addStopSign(sx+14,sz-14,Math.PI);addStopSign(sx-14,sz+14,0)}
 for(const town of TOWNS){
@@ -458,8 +448,8 @@ B(garageGroup,5.5,7,.5,11.25,3.6,-8.25,garageWall);B(garageGroup,5.5,7,.5,11.25,
 B(garageGroup,29,.7,23,0,7.2,0,garageRoof);B(garageGroup,28,.18,.28,0,6.65,-11.15,garageTrim);
 garageGroup.position.set(HOME.x,0,HOME.z);sc.add(garageGroup);
 const HOUSE={x:HOME.x+68,z:HOME.z+14},houseGroup=new THREE.Group(),houseInteriorGroup=new THREE.Group();const houseWall=M(0xc0b5a0,{roughness:.9}),houseRoof=M(0x4b4140,{roughness:.92}),houseFloor=M(0x806c54,{roughness:.95}),houseWindow=M(0x78b8d0,{roughness:.15,metalness:.12,transparent:true,opacity:.62}),houseTrim=M(0xf0e5d3,{roughness:.8});
-B(houseGroup,16,.25,13,0,.13,0,houseFloor);B(houseGroup,16,3.3,.28,0,1.8,-6.35,houseWall);B(houseGroup,16,3.3,.28,0,1.8,6.35,houseWall);B(houseGroup,.28,3.3,12.7,-7.85,1.8,0,houseWall);B(houseGroup,.28,3.3,12.7,7.85,1.8,0,houseWall);B(houseGroup,17,.3,14,0,3.55,0,houseRoof);
-for(const x of[-4.7,0,4.7]){B(houseGroup,2.0,1.25,.08,x,2.0,6.51,houseWindow);B(houseGroup,.08,1.35,.1,x,2.0,6.57,houseTrim);B(houseGroup,2.08,.08,.1,x,2.0,6.57,houseTrim)}B(houseGroup,1.2,2.2,.12,-5.8,1.3,6.55,M(0x49392d));
+B(houseGroup,16,.25,13,0,.13,0,houseFloor);B(houseGroup,16,3.3,.28,0,1.8,-6.35,houseWall);B(houseGroup,2.0,3.3,.28,-7.0,1.8,6.35,houseWall);B(houseGroup,2.0,3.3,.28,7.0,1.8,6.35,houseWall);B(houseGroup,2.0,.8,.28,-4.7,3.05,6.35,houseWall);B(houseGroup,2.0,.8,.28,0,3.05,6.35,houseWall);B(houseGroup,2.0,.8,.28,4.7,3.05,6.35,houseWall);B(houseGroup,1.8,1.0,.28,-2.35,3.0,6.35,houseWall);B(houseGroup,1.8,1.0,.28,2.35,3.0,6.35,houseWall);B(houseGroup,.28,3.3,12.7,-7.85,1.8,0,houseWall);B(houseGroup,.28,3.3,12.7,7.85,1.8,0,houseWall);B(houseGroup,17,.3,14,0,3.55,0,houseRoof);
+for(const x of[-4.7,0,4.7]){B(houseGroup,2.0,1.25,.08,x,2.0,6.51,houseWindow);B(houseGroup,.08,1.35,.1,x,2.0,6.57,houseTrim);B(houseGroup,2.08,.08,.1,x,2.0,6.57,houseTrim)}B(houseGroup,1.25,2.2,.045,-5.8,1.3,6.54,M(0x49392d));B(houseGroup,.1,2.35,.12,-6.45,1.2,6.58,houseTrim);B(houseGroup,.1,2.35,.12,-5.15,1.2,6.58,houseTrim);B(houseGroup,1.4,.12,.12,-5.8,2.42,6.58,houseTrim);
 // Furnishings are inside the same room and visible through the large front windows.
 B(houseGroup,4.2,.75,1.5,-1.2,.55,-1.5,M(0x647f83));B(houseGroup,4.2,.18,1.5,-1.2,1.02,-1.5,M(0xb7a58b));B(houseGroup,2.2,.85,1.0,4.1,.58,-3.4,M(0x6a5139));B(houseGroup,1.1,1.4,.1,4.1,1.35,-3.85,M(0x263b4a));B(houseGroup,2.6,.18,1.2,-3.9,.62,3.2,M(0x49392d));houseGroup.position.set(HOUSE.x,0,HOUSE.z);sc.add(houseGroup);let houseInterior=false,genericInterior=false,currentInteriorBuilding=null,genericInteriorGroup=null,interiorCenter={x:HOUSE.x,z:HOUSE.z},housePlayer={x:0,z:1.5},houseYaw=0;
 function makeGenericInterior(building){
@@ -469,7 +459,7 @@ function makeGenericInterior(building){
  // Open-front room layout with visible windows: the camera can look outside through the glass panes.
  B(g,18,3.2,.28,0,1.7,-6,wall);B(g,.28,3.2,12,-9,1.7,0,wall);B(g,.28,3.2,12,9,1.7,0,wall);
  B(g,3.8,3.2,.28,-5,1.7,6,wall);B(g,3.8,3.2,.28,5,1.7,6,wall);
- B(g,10,.08,.12,0,2.1,5.83,glass);B(g,.08,1.8,.1,-4.8,2.1,5.9,wood);B(g,.08,1.8,.1,4.8,2.1,5.9,wood);
+ B(g,10,.08,.12,0,2.1,5.83,glass);B(g,.08,1.8,.1,-4.8,2.1,5.9,wood);B(g,.08,1.8,.1,4.8,2.1,5.9,wood);B(g,7,.08,.12,0,2.15,-5.83,glass);B(g,.08,1.7,.1,-3.4,2.15,-5.9,wood);B(g,.08,1.7,.1,3.4,2.15,-5.9,wood);B(g,.08,.12,7,8.83,2.15,0,glass);B(g,.08,1.7,.1,8.9,2.15,-3.4,wood);B(g,.08,1.7,.1,8.9,2.15,3.4,wood);B(g,.08,.12,7,-8.83,2.15,0,glass);B(g,.08,1.7,.1,-8.9,2.15,-3.4,wood);B(g,.08,1.7,.1,-8.9,2.15,3.4,wood);
  B(g,4,.6,1.5,-2,.45,-1,wood);B(g,4,.15,1.5,-2,.83,-1,furn);B(g,1.5,.8,.9,4,.5,-3,wood);B(g,1.2,1.4,.1,4,1.25,-3.5,glass);
  B(g,1.2,1.5,1.2,0,.8,-4.2,furn);
  g.position.set(building.x,0,building.z);sc.add(g);genericInteriorGroup=g;
@@ -495,10 +485,13 @@ addLake(-1900,1700,330,230);addLake(900,-300,280,180);addLake(2500,-2300,360,210
 const highwayMat=M(0x24292d,{roughness:.95}),highwayLine=M(0xe8dfb4,{roughness:.8}),bridgeMat=M(0x777c80,{roughness:.85});
 for(let i=0;i<5;i++){const z=-3000+i*1500;B(roadGroup,34,.16,8600,0,.12,z,roadShoulder);B(roadGroup,28,.19,8600,0,.2,z,highwayMat);B(roadGroup,.18,.035,8600,0,.32,z-13,highwayLine);B(roadGroup,.18,.035,8600,0,.32,z+13,highwayLine);B(roadGroup,1.2,.04,7600,0,.33,z,roadYellow);for(let x=-4000;x<=4000;x+=100){B(roadGroup,1.7,.035,4,x,.34,z-5,highwayLine);B(roadGroup,1.7,.035,4,x,.34,z+5,highwayLine)}
  // Bridge decks and guardrails at river/lake crossings.
- if(i<4){const bx=-2300+i*1450;B(roadGroup,42,.8,40,bx,.7,z,bridgeMat);for(const side of[-1,1])B(roadGroup,42,1.1,.35,bx,1.35,z+side*18,poleMat)}
+ if(i<4){const bx=-2300+i*1450;B(roadGroup,42,.8,40,bx,.7,z,bridgeMat);for(const side of[-1,1])B(roadGroup,42,1.1,.35,bx,1.35,z+side*18,poleMat);for(const px of[-15,0,15])B(roadGroup,2,1.4,2,bx+px,-.15,z,bridgeMat)}
 }
+// Overhead highway direction signs on shoulder gantries, with destinations chosen from the nearby towns.
+function addHighwaySign(x,z,rotation,labelA,labelB){const g=new THREE.Group(),steel=M(0x4c555b,{roughness:.65,metalness:.65}),panel=M(0x145238,{roughness:.8});B(g,.22,6,.22,-8,3,0,steel);B(g,.22,6,.22,8,3,0,steel);B(g,17,.18,.2,0,5.8,0,steel);B(g,12,2.2,.18,0,4.55,0,panel);const cv=document.createElement('canvas');cv.width=512;cv.height=96;const c=cv.getContext('2d');c.fillStyle='#145238';c.fillRect(0,0,512,96);c.strokeStyle='#f4f1df';c.lineWidth=5;c.strokeRect(3,3,506,90);c.fillStyle='#fff';c.font='bold 29px Arial';c.textAlign='center';c.fillText(labelA,256,38);c.font='bold 24px Arial';c.fillText('→ '+labelB,256,72);const tex=new THREE.CanvasTexture(cv);const sign=new THREE.Mesh(new THREE.PlaneGeometry(11.5,2.1),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide}));sign.position.set(0,4.55,.13);g.add(sign);g.position.set(x,0,z);g.rotation.y=rotation;sc.add(g)}
+for(let i=0;i<5;i++){const z=-3000+i*1500;for(const x of[-3300,-500,2300]){const a=TOWNS[(i+1)%TOWNS.length].name,b=TOWNS[(i+4)%TOWNS.length].name;addHighwaySign(x,z+31,0,'I-'+(10+i*2),a+'  /  '+b)}}
 // Additional bridge decks where the highways cross lake inlets.
-for(const br of [{x:-1900,z:1500},{x:900,z:0},{x:2500,z:-1500}]){B(roadGroup,84,.85,46,br.x,.8,br.z,bridgeMat);for(const side of[-1,1])B(roadGroup,84,1.15,.35,br.x,1.45,br.z+side*22,poleMat);for(let xx=-36;xx<=36;xx+=12)B(roadGroup,1.2,.2,2,br.x+xx,1.35,br.z,highwayLine)}
+for(const br of [{x:-1900,z:1500},{x:900,z:0},{x:2500,z:-1500}]){B(roadGroup,84,.85,46,br.x,.8,br.z,bridgeMat);for(const side of[-1,1])B(roadGroup,84,1.15,.35,br.x,1.45,br.z+side*22,poleMat);for(const px of[-28,-14,0,14,28])B(roadGroup,2,1.5,2,br.x+px,-.15,br.z,bridgeMat);for(let xx=-36;xx<=36;xx+=12)B(roadGroup,1.2,.2,2,br.x+xx,1.35,br.z,highwayLine)}
 const parkMat=M(0x315c37,{roughness:1}),parkTreeMat=M(0x315d35,{roughness:1});
 for(let i=0;i<10;i++){const x=-3150+(i%5)*1500,z=-2600+Math.floor(i/5)*5200,g=new THREE.Group();B(g,170,.12,135,0,.08,0,parkMat);for(let j=0;j<12;j++){const tx=(Math.random()-.5)*145,tz=(Math.random()-.5)*110;B(g,.8,4,.8,tx,2,tz,parkTreeMat);const crown=new THREE.Mesh(new THREE.SphereGeometry(3.2,7,6),parkTreeMat);crown.position.set(tx,5,tz);g.add(crown)}g.position.set(x,0,z);sc.add(g)}
 for(let i=0;i<5;i++){const hill=new THREE.Mesh(new THREE.SphereGeometry(1,18,12),M(0x526b42,{roughness:1}));hill.scale.set(240+Math.random()*90,65+Math.random()*35,180+Math.random()*80);hill.position.set(-3000+i*1450,30,-3400+(i%2)*6500);hill.castShadow=true;sc.add(hill)}
@@ -905,7 +898,7 @@ function drawWorldMap(){
   ctx.fillStyle='#315d70';for(const lake of STATE_LAKES){ctx.beginPath();lake.points.forEach((p,j)=>j?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1])));ctx.closePath();ctx.fill();ctx.strokeStyle='#6b9ba7';ctx.lineWidth=1.5;ctx.stroke()}
   for(const town of TOWNS){ctx.fillStyle='#4b514c';ctx.fillRect(X(town.x-250),Y(town.z+250),Math.max(2,w*500/(mx-mn)),Math.max(2,h*500/(mx-mn)));}ctx.fillStyle='#d8c89b';for(const n of NEIGHBORHOODS){ctx.fillRect(X(n.x)-1,Y(n.z)-1,2.5,2.5)}
  ctx.strokeStyle='#324653';ctx.lineWidth=1;for(let p=-4000;p<=4000;p+=500){ctx.beginPath();ctx.moveTo(X(p),Y(mn));ctx.lineTo(X(p),Y(mx));ctx.stroke();ctx.beginPath();ctx.moveTo(X(mn),Y(p));ctx.lineTo(X(mx),Y(p));ctx.stroke()}
- ctx.strokeStyle='#58636b';ctx.lineWidth=2;for(let p=-4000;p<=4000;p+=500){ctx.beginPath();ctx.moveTo(X(p),Y(mn));ctx.lineTo(X(p),Y(mx));ctx.stroke();ctx.beginPath();ctx.moveTo(X(mn),Y(p));ctx.lineTo(X(mx),Y(p));ctx.stroke()}ctx.strokeStyle='#d2b66d';ctx.lineWidth=3.5;for(let hz=-3000;hz<=3000;hz+=1500){ctx.beginPath();ctx.moveTo(X(mn),Y(hz));ctx.lineTo(X(mx),Y(hz));ctx.stroke()}
+ ctx.strokeStyle='#58636b';ctx.lineWidth=2;for(let p=-4000;p<=4000;p+=500){ctx.beginPath();ctx.moveTo(X(p),Y(mn));ctx.lineTo(X(p),Y(mx));ctx.stroke();ctx.beginPath();ctx.moveTo(X(mn),Y(p));ctx.lineTo(X(mx),Y(p));ctx.stroke()}ctx.strokeStyle='#d2b66d';ctx.lineWidth=4;for(let hz=-3000;hz<=3000;hz+=1500){ctx.beginPath();ctx.moveTo(X(mn),Y(hz));ctx.lineTo(X(mx),Y(hz));ctx.stroke()}
  // Mark the dense local street networks within each named town.
  ctx.strokeStyle='#7b8c91';ctx.lineWidth=1;for(const town of TOWNS){ctx.beginPath();ctx.moveTo(X(town.x-300),Y(town.z));ctx.lineTo(X(town.x+300),Y(town.z));ctx.stroke();ctx.beginPath();ctx.moveTo(X(town.x),Y(town.z-300));ctx.lineTo(X(town.x),Y(town.z+300));ctx.stroke()}
  // Recent tornado track.
@@ -915,7 +908,7 @@ function drawWorldMap(){
  for(const b of buildings){ctx.fillStyle=b.destroyed?'#9d493f':'#8fa5ae';ctx.fillRect(X(b.x)-1,Y(b.z)-1,2.5,2.5)}
  if(Mi.on&&T){const tx=X(T.x),ty=Y(T.z),scale=(w-2*pad)/(mx-mn),rad=Math.max(4,T.R*scale);ctx.beginPath();ctx.arc(tx,ty,rad,0,Math.PI*2);ctx.fillStyle=T.formed?'rgba(245,66,54,.16)':'rgba(248,210,90,.13)';ctx.fill();ctx.strokeStyle=T.formed?'#ff594e':'#f8d25a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(tx,ty,Math.max(4,rad*.45),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(tx,ty,T.formed?3.6:2.8,0,Math.PI*2);ctx.fillStyle=T.formed?'#ff4b43':'#ffd86a';ctx.fill();ctx.fillStyle=T.formed?'#ffb2a4':'#ffe5a0';ctx.font='bold 10px Verdana';ctx.fillText(T.formed?'TORNADO':'ROTATION',tx+7,ty-8)}
  const player=Mi.on&&Mi.car?(Mi.exit&&Mi.player?Mi.player:Mi.car):homeCar;if(player){ctx.save();ctx.translate(X(player.x),Y(player.z));ctx.rotate(Mi.on&&Mi.exit&&Mi.player?-Mi.player.yaw:player.a||0);ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(5,5);ctx.lineTo(-5,5);ctx.closePath();ctx.fillStyle='#77f4b3';ctx.fill();ctx.restore()}
- for(const station of gasStations){ctx.fillStyle='#f4d34d';ctx.fillRect(X(station.x)-3,Y(station.z)-3,6,6)}
+ for(const site of (serviceSites||[])){ctx.fillStyle='#f5eee2';ctx.beginPath();ctx.arc(X(site.x),Y(site.z),1.8,0,Math.PI*2);ctx.fill()}for(const station of gasStations){ctx.fillStyle='#f4d34d';ctx.fillRect(X(station.x)-3,Y(station.z)-3,6,6)}
  for(const p of (Mi.probes||[])){ctx.fillStyle='#ffc14f';ctx.fillRect(X(p.x)-3,Y(p.z)-3,6,6)}
  // Live storm-chaser trackers: armored teams are cyan diamonds; the standard chase SUV is yellow.
  for(const b of (chaserBots||[])){if(!b.mesh)continue;const bx=X(b.mesh.position.x),by=Y(b.mesh.position.z);ctx.save();ctx.translate(bx,by);ctx.rotate(Math.PI/4);ctx.fillStyle=b.armored?'#43e6ff':'#ffc14f';ctx.strokeStyle='#06121a';ctx.lineWidth=1.5;ctx.fillRect(-4,-4,8,8);ctx.strokeRect(-4,-4,8,8);ctx.restore();if(mapExpanded){ctx.font='bold 10px Verdana';ctx.fillStyle=b.armored?'#8ff3ff':'#ffe0a0';ctx.fillText(b.name.split(' ')[0],bx+7,by-7)}}
