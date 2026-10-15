@@ -172,6 +172,7 @@ window.ntrStartFromButton=function(){
  const btn=document.getElementById('playBtn'),intro=document.getElementById('intro'),note=intro&&intro.querySelector('.subnote');
  try{
   if(typeof window.playGame==='function'){
+   btn.textContent='STARTING…';
    window.playGame();
    if(window.gameStarted===true||intro&&intro.hidden)return;
   }
@@ -460,7 +461,7 @@ function addTownBuilding(town,idx,x,z){
 for(const town of TOWNS){
  // Dense connected neighborhood grid with streets that continue through each district.
  for(let off=-300;off<=300;off+=60){B(roadGroup,6.8,.075,660,town.x+off,.065,town.z,asphalt);B(roadGroup,660,.075,6.8,town.x,.065,town.z+off,asphalt);B(roadGroup,.11,.025,630,town.x+off,.11,town.z,roadWhite);B(roadGroup,630,.025,.11,town.x,.11,town.z+off,roadWhite)}
- let idx=0;for(const ox of[-270,-210,-150,-90,-30,30,90,150,210,270])for(const oz of[-270,-210,-150,-90,-30,30,90,150,210,270]){addTownBuilding(town,idx++,town.x+ox+(Math.random()-.5)*3,town.z+oz+(Math.random()-.5)*3)}
+ let idx=0;for(const ox of[-240,-160,-80,80,160,240])for(const oz of[-240,-160,-80,80,160,240]){addTownBuilding(town,idx++,town.x+ox+(Math.random()-.5)*3,town.z+oz+(Math.random()-.5)*3)}
  addTownSign(town);
 }
  // Two schools per city, with a visible sign and school-bus-yellow entrance canopy.
@@ -524,8 +525,8 @@ for(let ti=0;ti<TOWNS.length;ti++){const t=TOWNS[ti];for(let ni=0;ni<11;ni++){co
 const serviceSites=[];
 function addMiniMart(x,z,label){const g=new THREE.Group(),wall=M(0xc9c3b4,{roughness:.85}),roof=M(0x3c4144,{roughness:.85}),glass=M(0x527987,{roughness:.2,metalness:.1});B(g,17,5,12,0,2.5,0,wall);B(g,18,.35,13,0,5.1,0,roof);B(g,12,2.2,.08,0,2.1,6.05,glass);B(g,5,.25,.2,0,4.1,6.12,M(0xf2e7cc));g.position.set(x,0,z);sc.add(g);serviceSites.push({x,z,g,label});buildings.push({g,x,z,w:18,d:13,h:5,town:'Regional',commercial:true,hp:2.5,damage:0,destroyed:false,wallColor:0xc9c3b4,roofColor:0x3c4144})}
 function addRestaurant(x,z,i){const g=new THREE.Group(),walls=[0xb8a48b,0xd2c9b7,0x9cacae,0xc5b2a0],wall=M(walls[i%walls.length],{roughness:.8}),roof=M(i%2?0x39464c:0x8e3028,{roughness:.85}),glass=M(0x568092,{roughness:.2});B(g,22,5.5,16,0,2.75,0,wall);B(g,23,.35,17,0,5.65,0,roof);B(g,14,2.2,.08,0,2.4,8.08,glass);B(g,6,.3,.2,0,4.25,8.15,M(0xf4e7c9));g.position.set(x,0,z);sc.add(g);const label=['DINER','PIZZA','BURGER','FAMILY GRILL','CAFE','TACO'][i%6]+' '+(i+1);serviceSites.push({x,z,g,label});buildings.push({g,x,z,w:24,d:18,h:5.5,town:'Regional',commercial:true,hp:2.5,damage:0,destroyed:false,wallColor:0xb8a48b,roofColor:0x39464c})}
-for(let i=0;i<90;i++){const t=TOWNS[i%TOWNS.length],ring=Math.floor(i/TOWNS.length),ang=i*2.39996,r=390+(ring%5)*72;addRestaurant(t.x+Math.cos(ang)*r,t.z+Math.sin(ang)*r,i)}
-for(let i=0;i<50;i++){const t=TOWNS[i%TOWNS.length],ring=Math.floor(i/TOWNS.length),ang=i*2.39996,r=320+(ring%5)*58,x=t.x+Math.cos(ang)*r,z=t.z+Math.sin(ang)*r;addMiniMart(x+25,z,'QUICK MART');makeGasStation(i+20,t)}
+for(let i=0;i<48;i++){const t=TOWNS[i%TOWNS.length],ring=Math.floor(i/TOWNS.length),ang=i*2.39996,r=390+(ring%5)*72;addRestaurant(t.x+Math.cos(ang)*r,t.z+Math.sin(ang)*r,i)}
+for(let i=0;i<24;i++){const t=TOWNS[i%TOWNS.length],ring=Math.floor(i/TOWNS.length),ang=i*2.39996,r=320+(ring%5)*58,x=t.x+Math.cos(ang)*r,z=t.z+Math.sin(ang)*r;addMiniMart(x+25,z,'QUICK MART');makeGasStation(i+20,t)}
 // Two regional vehicle dealerships.
 function addDealership(x,z,name){const g=new THREE.Group(),wall=M(0xbcc5c8,{roughness:.45,metalness:.12}),glass=M(0x5e8796,{roughness:.16,metalness:.2}),roof=M(0x202529,{roughness:.65});B(g,48,8,28,0,4,0,glass);B(g,50,.8,30,0,8.4,0,roof);B(g,50,.45,30,0,.25,0,wall);const sign=document.createElement('canvas');sign.width=512;sign.height=96;const c=sign.getContext('2d');c.fillStyle='#050505';c.fillRect(0,0,512,96);c.fillStyle='#fff';c.font='bold 40px Arial';c.textAlign='center';c.fillText(name,256,60);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sign)}));sprite.position.set(0,11,0);sprite.scale.set(38,7,1);g.add(sprite);g.position.set(x,0,z);sc.add(g);buildings.push({g,x,z,w:50,d:30,h:8,town:'Regional',commercial:true,hp:3,damage:0,destroyed:false,wallColor:0xbcc5c8,roofColor:0x202529})}
 addDealership(-350,3200,'STATE AUTO SALES');addDealership(2950,-1500,'HIGHWAY MOTOR GROUP');
@@ -563,13 +564,13 @@ function addCivicBuilding(town,type,x,z){
 for(const town of TOWNS){addCivicBuilding(town,'LIBRARY',town.x-420,town.z+410);addCivicBuilding(town,'HOTEL',town.x+420,town.z-410)}
 
 // Parked driveway vehicles give residential streets a lived-in appearance without adding active AI cost.
-const parkedCars=[];{const homes=buildings.filter(b=>!b.commercial).slice(0,115);for(let i=0;i<homes.length;i++){const b=homes[i],g=new THREE.Group(),paint=M([0x6f777a,0x9d2926,0x283f5b,0xc7c4ba,0x383b3d,0x687d63][i%6],{roughness:.55,metalness:.2}),glass=M(0x23313a,{roughness:.22,metalness:.15}),rubber=M(0x101112,{roughness:.95});B(g,4.2,.55,1.85,0,.58,0,paint);B(g,2.15,.62,1.45,-.15,1.08,0,glass);for(const xx of[-1.35,1.35])for(const zz of[-.92,.92])B(g,.18,.42,.16,xx,.32,zz,rubber);const side=(i%2?1:-1),a=(b.g.rotation.y||0);g.position.set(b.x+side*(b.w/2+6),0,b.z+((i%3)-1)*2);g.rotation.y=a;sc.add(g);parkedCars.push(g)}}
+const parkedCars=[];{const homes=buildings.filter(b=>!b.commercial).slice(0,60);for(let i=0;i<homes.length;i++){const b=homes[i],g=new THREE.Group(),paint=M([0x6f777a,0x9d2926,0x283f5b,0xc7c4ba,0x383b3d,0x687d63][i%6],{roughness:.55,metalness:.2}),glass=M(0x23313a,{roughness:.22,metalness:.15}),rubber=M(0x101112,{roughness:.95});B(g,4.2,.55,1.85,0,.58,0,paint);B(g,2.15,.62,1.45,-.15,1.08,0,glass);for(const xx of[-1.35,1.35])for(const zz of[-.92,.92])B(g,.18,.42,.16,xx,.32,zz,rubber);const side=(i%2?1:-1),a=(b.g.rotation.y||0);g.position.set(b.x+side*(b.w/2+6),0,b.z+((i%3)-1)*2);g.rotation.y=a;sc.add(g);parkedCars.push(g)}}
 
 
 const powerWireSegments=[];const powerWireMat=new THREE.LineBasicMaterial({color:0x222930,transparent:true,opacity:1});
-{const pole=new THREE.InstancedMesh(new THREE.CylinderGeometry(.14,.18,9,6),M(0x4b3a2a,{roughness:1,metalness:0}),3000),arm=new THREE.InstancedMesh(U,M(0x3b2e22,{roughness:1,metalness:0}),3000),m4=new THREE.Matrix4(),q4=new THREE.Quaternion();let n=0;
-for(let p=-4000;p<=4000;p+=500)for(let x=-4000;x<=4000;x+=100){if(x%500===0)continue;m4.compose(new THREE.Vector3(x,4.5,p+9),q4,new THREE.Vector3(1,1,1));pole.setMatrixAt(n,m4);m4.compose(new THREE.Vector3(x,8.6,p+9),q4,new THREE.Vector3(.14,.14,3.2));arm.setMatrixAt(n,m4);n++;
- if((x+100)%500!==0&&x+100<=4000){const z=p+9,pts=[new THREE.Vector3(x,8.6,z),new THREE.Vector3(x+100,8.6,z)],wire=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),powerWireMat.clone());wire.userData.baseColor=0x333940;sc.add(wire);powerWireSegments.push({x1:x,z1:z,x2:x+100,z2:z,wire,hit:false})}}
+{const pole=new THREE.InstancedMesh(new THREE.CylinderGeometry(.14,.18,9,6),M(0x4b3a2a,{roughness:1,metalness:0}),500),arm=new THREE.InstancedMesh(U,M(0x3b2e22,{roughness:1,metalness:0}),500),m4=new THREE.Matrix4(),q4=new THREE.Quaternion();let n=0;
+for(let p=-4000;p<=4000;p+=1000)for(let x=-4000;x<=4000;x+=200){if(x%500===0)continue;m4.compose(new THREE.Vector3(x,4.5,p+9),q4,new THREE.Vector3(1,1,1));pole.setMatrixAt(n,m4);m4.compose(new THREE.Vector3(x,8.6,p+9),q4,new THREE.Vector3(.14,.14,3.2));arm.setMatrixAt(n,m4);n++;
+ if((x+200)%1000!==0&&x+200<=4000){const z=p+9,pts=[new THREE.Vector3(x,8.6,z),new THREE.Vector3(x+200,8.6,z)],wire=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),powerWireMat.clone());wire.userData.baseColor=0x333940;sc.add(wire);powerWireSegments.push({x1:x,z1:z,x2:x+100,z2:z,wire,hit:false})}}
 pole.count=arm.count=Math.min(n,pole.instanceMatrix.count,arm.instanceMatrix.count);pole.castShadow=arm.castShadow=true;sc.add(pole,arm)}
 const fallenPowerPoles=[];const powerArcMat=new THREE.LineBasicMaterial({color:0xffd36a,transparent:true,opacity:1});const powerArc=new THREE.Line(new THREE.BufferGeometry(),powerArcMat);powerArc.visible=false;sc.add(powerArc);const powerArcLight=new THREE.PointLight(0xffb84d,0,90,2);sc.add(powerArcLight);let powerArcTimer=0;
 function updatePowerLineStrikes(dt){if(!Mi.on||!T){powerArc.visible=false;powerArcLight.intensity=0;return}powerArcTimer=Math.max(0,powerArcTimer-dt);if(powerArcTimer<=0)powerArc.visible=false;for(const line of powerWireSegments){if(line.hit)continue;const dx=line.x2-line.x1,dz=line.z2-line.z1,den=dx*dx+dz*dz,t=cl(((T.x-line.x1)*dx+(T.z-line.z1)*dz)/den,0,1),px=line.x1+dx*t,pz=line.z1+dz*t,dist=Math.hypot(T.x-px,T.z-pz);if(dist<Math.max(7,T.R*.075)){line.hit=true;line.fall=0;line.fallX=px;line.fallZ=pz;const fallGroup=new THREE.Group();const poleMesh=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,9,6),M(0x4b3a2a,{roughness:1}));poleMesh.position.y=4.5;fallGroup.add(poleMesh);const armMesh=new THREE.Mesh(new THREE.BoxGeometry(3.4,.14,.14),M(0x3b2e22,{roughness:1}));armMesh.position.set(0,8.6,0);fallGroup.add(armMesh);fallGroup.position.set(px,0,pz);sc.add(fallGroup);line.fallenMesh=fallGroup;fallenPowerPoles.push({mesh:fallGroup,progress:0,axis:Math.random()<.5?'x':'z'});line.wire.material.color.setHex(0x191d21);line.wire.material.opacity=.25;const points=[new THREE.Vector3(px,8.6,pz)];let ax=px,ay=8.6,az=pz;for(let i=0;i<8;i++){ax+=(Math.random()-.5)*5;ay-=Math.random()*1.5;az+=(Math.random()-.5)*5;points.push(new THREE.Vector3(ax,Math.max(.5,ay),az))}powerArc.geometry.dispose();powerArc.geometry=new THREE.BufferGeometry().setFromPoints(points);powerArc.visible=true;powerArcTimer=.32;powerArcLight.position.set(px,7,pz);powerArcLight.intensity=9;powerArcTimer=.32;msg('Tornado struck a power line! Electrical arcing and a local outage.');break}}
@@ -687,7 +688,7 @@ function makeCivilian(i){
   const tail=M(0xb71922,{emissive:0x330000});for(const side of[-1,1]){B(g,.06,.16,.12,-v.l/2-.02,.62,side*v.w*.32,tail);B(g,.24,.13,.11,-v.l*.12,1.0,side*(v.w*.52+.1),body)}
   const wheelGeo=new THREE.CylinderGeometry(.28,.28,.2,10);wheelGeo.rotateX(Math.PI/2);
   for(const x of[-v.l*.32,v.l*.32])for(const z of[-v.w*.52,v.w*.52]){const wheel=new THREE.Mesh(wheelGeo,rubber);wheel.position.set(x,.3,z);g.add(wheel)}
-  const highway=i<270,highwayIndex=Math.floor(Math.random()*5),highwayZ=-3000+highwayIndex*1500,highwayLane=highwayZ+(Math.random()<.5?-1:1)*(5+Math.random()*4),axis=highway?'x':(Math.random()<.5?'x':'z'),roadIndex=Math.floor(Math.random()*17)-8,lane=highway?highwayLane:roadIndex*500+(Math.random()<.5?-2.25:2.25),dir=highway?(highwayLane<highwayZ?1:-1):(Math.random()<.5?-1:1),along=-4100+Math.random()*8200;
+  const highway=i<135,highwayIndex=Math.floor(Math.random()*5),highwayZ=-3000+highwayIndex*1500,highwayLane=highwayZ+(Math.random()<.5?-1:1)*(5+Math.random()*4),axis=highway?'x':(Math.random()<.5?'x':'z'),roadIndex=Math.floor(Math.random()*17)-8,lane=highway?highwayLane:roadIndex*500+(Math.random()<.5?-2.25:2.25),dir=highway?(highwayLane<highwayZ?1:-1):(Math.random()<.5?-1:1),along=-4100+Math.random()*8200;
   const x=axis==='x'?along:lane,z=axis==='x'?lane:along,yaw=axis==='x'?(dir>0?0:Math.PI):(dir>0?-Math.PI/2:Math.PI/2);
   g.position.set(x,0,z);g.rotation.y=yaw;sc.add(g);
   const cruiseSpeed=highway?22+Math.random()*10:7+Math.random()*7;
@@ -697,7 +698,7 @@ function makeCivilian(i){
   g.userData.indicators=indicators;g.userData.signalOff=signalOff;g.userData.signalOn=signalOn;
   traffic.push({g,x,z,startX:x,startZ:z,axis,lane,baseLane:lane,dir,speed:cruiseSpeed,cruiseSpeed,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0,wait:Math.random()*1.5,stoppedAt:null,highway,signalSide:0,signalUntil:0,laneTarget:null,laneChangeAt:0});
 }
-for(let i=0;i<360;i++)makeCivilian(i);
+for(let i=0;i<180;i++)makeCivilian(i);
 function resetTraffic(){for(const v of traffic){v.x=v.startX;v.z=v.startZ;v.rolled=false;v.roll=0;v.vx=v.vz=0;v.stopKey=null;v.stopHold=0;v.lane=v.baseLane;v.passing=false;v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0)}}
 function updateTraffic(dt){
  const now=performance.now()/1000,trafficBuckets=new Map();
@@ -1276,5 +1277,5 @@ updateTurnSignals();updateSpeedometer();updateFancyGrass(dt);updateGameClock(dt)
 sky.position.copy(cam.position);{const sx=Math.round(freeCamFocusX),sz=Math.round(freeCamFocusZ);sun.target.position.set(sx,0,sz);sun.position.set(sx+500,900,sz+300)}R.render(sc,cam)})(0);
 // Start positioned at the in-town garage, with the editor hidden behind the intro until PLAY is pressed.
 const _rebuild=rebuild;rebuild=function(){_rebuild();if(car){car.position.set(Mi.on&&Mi.car?Mi.car.x:homeCar.x,0,Mi.on&&Mi.car?Mi.car.z:homeCar.z);car.rotation.y=Mi.on&&Mi.car?Mi.car.a:homeCar.a;car.updateMatrixWorld(true);setFrameEditorVisuals(garageOpen&&!Mi.on);if(garageOpen&&!Mi.on&&!freeCamDetached){const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z)}}};
-setGraphicsQuality(graphicsQuality);rebuild();draw();ui();const playControl=document.getElementById('playBtn');if(playControl){playControl.addEventListener('click',function(ev){ev.preventDefault();playGame();});playControl.addEventListener('pointerup',function(ev){if(ev.pointerType==='touch'){ev.preventDefault();playGame();}});}window.playGame=playGame;$('#uiToggle').hidden=true;$('#graphicsBtn').hidden=true;$('#pn').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#speedometer').hidden=true;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#garageBtn').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;
+setGraphicsQuality(graphicsQuality);rebuild();draw();ui();window.playGame=playGame;$('#uiToggle').hidden=true;$('#graphicsBtn').hidden=true;$('#pn').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#speedometer').hidden=true;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#garageBtn').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;
 </script></body></html>
