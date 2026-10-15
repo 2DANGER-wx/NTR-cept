@@ -227,7 +227,17 @@ f350:{n:'Ford F-350 Dually',p:20000,m:3200,cd:.45,L:6.7,W:2.4,H:2.05,wb:4.1,c:0x
  armoredvan:{n:'Armored Research Van',p:32000,m:4800,cd:.58,L:6.2,W:2.3,H:2.55,wb:3.9,c:0x303b42,cab:[-.3,.02],t:1,d:1},
  command:{n:'Mobile Command Vehicle',p:35000,m:5200,cd:.59,L:7.0,W:2.4,H:3.05,wb:4.1,c:0x324c64,cab:[-.28,-.02],t:1,d:1},
  pickup4:{n:'Mid-size Pickup',p:8500,m:1980,cd:.41,L:5.35,W:1.92,H:1.86,wb:3.25,c:0x52764e,cab:[-.1,.28],t:1},
- coupe:{n:'Compact Coupe',p:5600,m:1430,cd:.30,L:4.3,W:1.82,H:1.34,wb:2.6,c:0x6c4d82,cab:[-.27,.04],t:0}};
+ coupe:{n:'Compact Coupe',p:5600,m:1430,cd:.30,L:4.3,W:1.82,H:1.34,wb:2.6,c:0x6c4d82,cab:[-.27,.04],t:0},
+ luxury_sedan:{n:'Luxury Executive Sedan',p:24500,m:1980,cd:.25,L:5.15,W:1.94,H:1.43,wb:3.12,c:0x172c40,cab:[-.37,.13],t:0},
+ electric_suv:{n:'Electric Utility SUV',p:29500,m:2650,cd:.29,L:5.0,W:2.02,H:1.72,wb:3.05,c:0x64717b,cab:[-.35,.16],t:0},
+ compact_pickup:{n:'Compact Work Pickup',p:7400,m:1760,cd:.39,L:5.0,W:1.86,H:1.8,wb:3.0,c:0xb77735,cab:[-.08,.27],t:1},
+ flatnose_van:{n:'Flat-Nose Cargo Van',p:11800,m:2540,cd:.47,L:5.5,W:2.08,H:2.45,wb:3.45,c:0xddd9ce,cab:[-.34,-.08],t:1},
+ sports_suv:{n:'Performance Street SUV',p:21000,m:2310,cd:.34,L:4.85,W:2.0,H:1.68,wb:2.95,c:0x752f35,cab:[-.33,.15],t:0},
+ vintage_pickup:{n:'Vintage Utility Pickup',p:9800,m:2050,cd:.49,L:5.25,W:1.95,H:1.92,wb:3.25,c:0x49644a,cab:[-.05,.24],t:1},
+ luxury_coupe:{n:'Grand Touring Coupe',p:27000,m:1880,cd:.27,L:4.8,W:1.94,H:1.31,wb:2.82,c:0x5c6572,cab:[-.27,.06],t:0},
+ motorhome:{n:'Class C Motorhome',p:31000,m:4900,cd:.61,L:7.0,W:2.42,H:3.2,wb:4.0,c:0xe4dfd2,cab:[-.31,-.02],t:1,d:1},
+ utility_wrecker:{n:'Utility Wrecker',p:24500,m:4500,cd:.55,L:6.6,W:2.35,H:2.65,wb:4.0,c:0xd0a12d,cab:[-.24,.0],t:1,d:1},
+ news_van:{n:'News Broadcast Van',p:16500,m:3150,cd:.48,L:6.0,W:2.25,H:2.65,wb:3.8,c:0xf0f0e7,cab:[-.3,.0],t:1}};
 const ARM=[0,1500,3500,7000,12000],SPK=[0,800,2000],HG=[0,900],START_FUEL=50;
 const SAVE_KEY='ntrcept_solidblocks_freecam_v3';
 let frameMultiSelection=new Set(),frameClipboard=[];
@@ -278,7 +288,7 @@ function updateSpeedometer(){
 }
 // ---------- three.js ----------
 const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});R.setPixelRatio(Math.min(devicePixelRatio,2));
-let graphicsQuality='medium',interceptShake=0,graphicsShakeOffset=new THREE.Vector3();const QUALITY={low:{pixel:.75,shadow:false,shadowSize:512,particles:.25,clouds:1},medium:{pixel:1,shadow:true,shadowSize:1024,particles:.55,clouds:2},high:{pixel:1.35,shadow:true,shadowSize:2048,particles:.8,clouds:3},fancy:{pixel:1.6,shadow:true,shadowSize:3072,particles:1,clouds:5}};function setGraphicsQuality(q){if(!QUALITY[q])return;graphicsQuality=q;try{localStorage.setItem('ntrcept_graphics',q)}catch(e){}const v=QUALITY[q];R.setPixelRatio(Math.min(devicePixelRatio*v.pixel, q==='fancy'?2:1.5));R.setSize(innerWidth,innerHeight,false);R.shadowMap.enabled=v.shadow;sun.shadow.mapSize.set(v.shadowSize,v.shadowSize);sun.shadow.needsUpdate=true;for(const b of document.querySelectorAll('#graphicsOptions button'))b.classList.toggle('selected',b.dataset.quality===q);$('#graphicsDescription').textContent=({low:'Maximum performance: lower render resolution, no realtime shadows, fewer storm particles.',medium:'Balanced performance and visuals with moderate shadows and storm effects.',high:'Sharper rendering, detailed shadows, denser precipitation and storm particles.',fancy:'Maximum detail: enhanced cloud layers, dark debris-filled tornado, dirt track, trees pulled into the circulation and camera shake during close intercepts. This preset may lower FPS.'})[q];applyFancyVisuals();if(typeof buildFancyGrass==='function')buildFancyGrass();}function toggleGraphicsMenu(){const m=$('#graphicsMenu');m.hidden=!m.hidden;}function applyFancyVisuals(){if(typeof fun!=='undefined'&&fun.material){fun.material.opacity=graphicsQuality==='fancy'?.92:graphicsQuality==='high'?.8:graphicsQuality==='medium'?.68:.48;fun.material.color.setHex(graphicsQuality==='fancy'?0x777d82:0xc2c8cc);fun.material.needsUpdate=true;}if(typeof pt!=='undefined'&&pt.material){pt.material.size=graphicsQuality==='fancy'?4.6:graphicsQuality==='high'?3.8:graphicsQuality==='medium'?3.2:2.2;pt.material.opacity=graphicsQuality==='fancy'?.96:graphicsQuality==='low'?.45:.8;}}try{const savedGraphics=localStorage.getItem('ntrcept_graphics');if(savedGraphics&&QUALITY[savedGraphics])graphicsQuality=savedGraphics}catch(e){}
+let graphicsQuality='medium',interceptShake=0,graphicsShakeOffset=new THREE.Vector3();const QUALITY={low:{pixel:.75,shadow:false,shadowSize:512,particles:.25,clouds:1},medium:{pixel:1,shadow:true,shadowSize:1024,particles:.55,clouds:2},high:{pixel:1.35,shadow:true,shadowSize:2048,particles:.8,clouds:3},fancy:{pixel:1.6,shadow:true,shadowSize:4096,particles:1,clouds:5}};function setGraphicsQuality(q){if(!QUALITY[q])return;graphicsQuality=q;try{localStorage.setItem('ntrcept_graphics',q)}catch(e){}const v=QUALITY[q];R.setPixelRatio(Math.min(devicePixelRatio*v.pixel, q==='fancy'?2:1.5));R.setSize(innerWidth,innerHeight,false);R.shadowMap.enabled=v.shadow;sun.shadow.mapSize.set(v.shadowSize,v.shadowSize);sun.shadow.needsUpdate=true;for(const b of document.querySelectorAll('#graphicsOptions button'))b.classList.toggle('selected',b.dataset.quality===q);$('#graphicsDescription').textContent=({low:'Maximum performance: lower render resolution, no realtime shadows, fewer storm particles.',medium:'Balanced performance and visuals with moderate shadows and storm effects.',high:'Sharper rendering, detailed shadows, denser precipitation and storm particles.',fancy:'Maximum detail: physically based frame metal, procedural grass shading, crossed 3D waving grass, reflective lakes, skyscraper downtown, highways, deeper shadows and dense storm effects. This preset may lower FPS.'})[q];applyFancyVisuals();if(typeof buildFancyGrass==='function')buildFancyGrass();}function toggleGraphicsMenu(){const m=$('#graphicsMenu');m.hidden=!m.hidden;}function applyFancyVisuals(){if(typeof fun!=='undefined'&&fun.material){fun.material.opacity=graphicsQuality==='fancy'?.92:graphicsQuality==='high'?.8:graphicsQuality==='medium'?.68:.48;fun.material.color.setHex(graphicsQuality==='fancy'?0x777d82:0xc2c8cc);fun.material.needsUpdate=true;}if(typeof pt!=='undefined'&&pt.material){pt.material.size=graphicsQuality==='fancy'?4.6:graphicsQuality==='high'?3.8:graphicsQuality==='medium'?3.2:2.2;pt.material.opacity=graphicsQuality==='fancy'?.96:graphicsQuality==='low'?.45:.8;}}try{const savedGraphics=localStorage.getItem('ntrcept_graphics');if(savedGraphics&&QUALITY[savedGraphics])graphicsQuality=savedGraphics}catch(e){}
 // Keep daylight balanced: excessive light + exposure was washing every surface toward white.
 R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.NoToneMapping;R.toneMappingExposure=1;
 const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.5,4000);
@@ -305,8 +315,34 @@ clouds.visible=T.formTimer>1;clouds.position.set(T.x,0,T.z);clouds.children.forE
 const near=T.formTimer>2&&w.r<T.R*7;rain.visible=near;if(near){rain.material.opacity=.14+.24*cl(1-w.r/(T.R*7),0,1);const cx=cam.position.x,cz=cam.position.z;for(let i=0;i<RN;i++){let y=rdrop[i*3+1]-34*dt;if(y<0)y+=32;rdrop[i*3+1]=y;const x=cx+rdrop[i*3],z=cz+rdrop[i*3+2],o=i*6;rpos[o]=x;rpos[o+1]=y;rpos[o+2]=z;rpos[o+3]=x-.25;rpos[o+4]=y+1.2;rpos[o+5]=z-.15}rain.geometry.attributes.position.needsUpdate=true}
 hail.visible=!!(T.formed&&T.hail>0&&w.r<3*T.R);funTex.offset.x-=dt*.35*form}
 const hudTick=dt=>((hudTick.c=(hudTick.c||0)-dt)<=0&&(hudTick.c=.1,true));
-let wavingGrass=null;const grassBlades=[];function buildFancyGrass(){if(wavingGrass){sc.remove(wavingGrass);wavingGrass.geometry.dispose();wavingGrass.material.dispose();wavingGrass=null}const count=graphicsQuality==='fancy'?2600:0;if(!count)return;const geo=new THREE.BufferGeometry(),verts=[],norms=[],indices=[];for(let i=0;i<count;i++){const x=(Math.random()-.5)*5200,z=(Math.random()-.5)*5200,h=.22+Math.random()*.45,w=.025+Math.random()*.025,b=verts.length/3;verts.push(x-w,0,z,x+w,0,z,x+w*.3,h,z+(Math.random()-.5)*.12);indices.push(b,b+1,b+2)}geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();wavingGrass=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x70964b,side:THREE.DoubleSide,roughness:1}));wavingGrass.frustumCulled=false;wavingGrass.userData.basePositions=geo.attributes.position.array.slice();sc.add(wavingGrass)}
-function updateFancyGrass(dt){if(!wavingGrass)return;const a=wavingGrass.geometry.attributes.position,base=wavingGrass.userData.basePositions,near=Mi.on&&T;for(let i=0;i<a.count;i+=3){const x=base[i*3],z=base[i*3+2],windPush=near?Math.max(0,1-Math.hypot(x-T.x,z-T.z)/(T.R*4)):0,phase=performance.now()*.0018+x*.011+z*.009;for(let k=0;k<3;k++){const idx=(i+k)*3;a.array[idx]=base[idx]+(k===2?Math.sin(phase)*(.04+windPush*.8):0);a.array[idx+1]=base[idx+1]+(k===2?Math.cos(phase)*(.04+windPush*.2):0);a.array[idx+2]=base[idx+2]+(k===2?Math.cos(phase)*(.04+windPush*.55):0)}}a.needsUpdate=true}
+let wavingGrass=null;const grassBlades=[];
+function buildFancyGrass(){
+ grassBlades.length=0;
+ if(wavingGrass){sc.remove(wavingGrass);wavingGrass.geometry.dispose();wavingGrass.material.dispose();wavingGrass=null}
+ const count=graphicsQuality==='fancy'?3800:0;if(!count)return;
+ const geo=new THREE.BufferGeometry(),verts=[],indices=[];
+ for(let i=0;i<count;i++){
+  const x=(Math.random()-.5)*8200,z=(Math.random()-.5)*8200,h=.28+Math.random()*.62,w=.035+Math.random()*.035;
+  // Three crossed, tapered blades per tuft make the grass volumetric rather than a single flat billboard.
+  for(let j=0;j<3;j++){
+   const ang=j*Math.PI/3+Math.random()*.25,dx=Math.cos(ang)*w,dz=Math.sin(ang)*w,b=verts.length/3;
+   verts.push(x-dx,0,z-dz,x+dx,0,z+dz,x+Math.cos(ang+Math.PI/2)*w*.22,h,z+Math.sin(ang+Math.PI/2)*w*.22);
+   indices.push(b,b+1,b+2);grassBlades.push({top:b+2,phase:Math.random()*6.28,height:h,x,z,angle:ang});
+  }
+ }
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const mat=new THREE.MeshStandardMaterial({color:0x8eae58,side:THREE.DoubleSide,roughness:.94,metalness:0,vertexColors:false});
+ mat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat bladeGrain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898,78.233))) * 43758.5453); diffuseColor.rgb *= 0.88 + bladeGrain * 0.20;');};
+ mat.customProgramCacheKey=()=> 'ntr-fancy-grass-grain-v2';
+ wavingGrass=new THREE.Mesh(geo,mat);wavingGrass.frustumCulled=false;wavingGrass.castShadow=true;wavingGrass.receiveShadow=true;wavingGrass.userData.basePositions=geo.attributes.position.array.slice();sc.add(wavingGrass);
+}
+function updateFancyGrass(dt){
+ if(!wavingGrass)return;const a=wavingGrass.geometry.attributes.position,base=wavingGrass.userData.basePositions,near=Mi.on&&T&&T.formed;
+ const time=performance.now()*.0018;
+ for(const blade of grassBlades){const top=blade.top,idx=top*3,dist=near?Math.hypot(blade.x-T.x,blade.z-T.z):1e9,windPush=near?Math.max(0,1-dist/(T.R*4)):0,phase=time+blade.x*.011+blade.z*.009+blade.phase;
+  a.array[idx]=base[idx]+Math.sin(phase)*(0.035+windPush*1.15);a.array[idx+1]=base[idx+1]+Math.cos(phase)*(0.025+windPush*.08);a.array[idx+2]=base[idx+2]+Math.cos(phase)*(0.035+windPush*.95);
+ }a.needsUpdate=true;
+}
 const TREES=[];{const q=document.createElement('canvas');q.width=q.height=256;const x=q.getContext('2d');
 // A mottled grass texture rather than broad stripes; use the correct color space so it stays green.
 x.fillStyle='#456635';x.fillRect(0,0,256,256);
@@ -338,8 +374,8 @@ function makeSolidBlockGeometry(length,height,width,roundPercent){
 // A simple road grid makes the environment navigable and gives civilian traffic lanes.
 const roadGroup=new THREE.Group();sc.add(roadGroup);
 const asphalt=M(0x292d30,{roughness:1,metalness:0}),roadWhite=M(0xd6d8ce,{roughness:.95,metalness:0}),roadYellow=M(0xd5a92e,{roughness:.95,metalness:0}),roadShoulder=M(0x59574f,{roughness:1,metalness:0});
-const ROAD_SPAN=4500;
-for(let p=-2000;p<=2000;p+=500){
+const ROAD_SPAN=9000;
+for(let p=-4000;p<=4000;p+=500){
   B(roadGroup,16,.035,ROAD_SPAN,p,.025,0,roadShoulder);B(roadGroup,ROAD_SPAN,.035,16,0,.025,p);
   B(roadGroup,11,.08,ROAD_SPAN,p,.055,0,asphalt);
   B(roadGroup,.13,.025,ROAD_SPAN,p-4.85,.105,0,roadWhite);B(roadGroup,.13,.025,ROAD_SPAN,p+4.85,.105,0,roadWhite);
@@ -353,8 +389,8 @@ const streetLights=[],trafficSignals=[];
 const poleMat=M(0x343b40,{roughness:.8,metalness:.45}),lampMat=M(0xffedb0,{emissive:0x665522,roughness:.3}),signalBlack=M(0x171b1f,{roughness:.7}),signalRed=M(0xd92525,{emissive:0x550000}),signalYellow=M(0xf5bd2e,{emissive:0x4b3200}),signalGreen=M(0x27d36a,{emissive:0x064a20});
 function addStreetLight(x,z,alongX=false){const g=new THREE.Group();B(g,.16,7,.16,0,3.5,0,poleMat);B(g,2.1,.12,.12,alongX?-.75:0,6.8,alongX?0:-.75,poleMat);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),lampMat);bulb.position.set(alongX?-1.65:0,6.65,alongX?0:-1.65);g.add(bulb);g.position.set(x,0,z);roadGroup.add(g);streetLights.push({g,bulb})}
 function addTrafficSignal(x,z,axis='x') {const g=new THREE.Group();B(g,.12,5.5,.12,0,2.75,0,poleMat);B(g,.72,1.8,.38,0,5.1,0,signalBlack);const lamps=[];for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.19,10,8),[signalRed,signalYellow,signalGreen][i]);m.position.set(0,5.65-i*.55,.22);g.add(m);lamps.push(m)}g.position.set(x,0,z);roadGroup.add(g);trafficSignals.push({x,z,axis,g,lamps,offset:Math.random()*20});}
-for(let p=-2000;p<=2000;p+=500){for(let z=-2000;z<=2000;z+=1000)addStreetLight(p+13,z+13,true);}
-for(let x=-2000;x<=2000;x+=1000)for(let z=-2000;z<=2000;z+=1000){addTrafficSignal(x+7,z+7,'x');addTrafficSignal(x-7,z-7,'z')}
+for(let p=-4000;p<=4000;p+=500){for(let z=-4000;z<=4000;z+=1000)addStreetLight(p+13,z+13,true);}
+for(let x=-4000;x<=4000;x+=1000)for(let z=-4000;z<=4000;z+=1000){addTrafficSignal(x+7,z+7,'x');addTrafficSignal(x-7,z-7,'z')}
 function signalState(sig,t){
  // Heads at the same intersection share a cycle; perpendicular approaches alternate right-of-way.
  const ix=Math.round(sig.x/1000),iz=Math.round(sig.z/1000),offset=((ix*7+iz*11)%8+8)%8;
@@ -379,7 +415,7 @@ function addTownSign(town){
 const stopSignOctGeo=new THREE.CylinderGeometry(.43,.43,.09,8),stopSignFaceGeo=new THREE.PlaneGeometry(.75,.75),stopSignMaterial=M(0xd51f28,{roughness:.7}),stopSignFaceTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=128;const c=cv.getContext('2d');c.fillStyle='#d51f28';c.beginPath();for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4,r=57;c.lineTo(64+Math.cos(a)*r,64+Math.sin(a)*r)}c.closePath();c.fill();c.strokeStyle='#fff';c.lineWidth=5;c.stroke();c.fillStyle='#fff';c.font='bold 23px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('STOP',64,64);const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;return tex})(),stopSignFaceMaterial=new THREE.MeshBasicMaterial({map:stopSignFaceTex,transparent:true,side:THREE.DoubleSide});
 function addStopSign(x,z,rot=0){const g=new THREE.Group();B(g,.09,2.2,.09,0,1.1,0,poleMat);const oct=new THREE.Mesh(stopSignOctGeo,stopSignMaterial);oct.rotation.y=Math.PI/8;oct.rotation.x=Math.PI/2;oct.position.set(0,2.05,.03);g.add(oct);const face=new THREE.Mesh(stopSignFaceGeo,stopSignFaceMaterial);face.position.set(0,2.05,.1);g.add(face);g.position.set(x,0,z);g.rotation.y=rot;roadGroup.add(g)}
 // Unsignalized regional intersections get four STOP signs; intersections with lights use the signal heads instead.
-for(let sx=-2000;sx<=2000;sx+=500)for(let sz=-2000;sz<=2000;sz+=500){if(sx%1000===0&&sz%1000===0)continue;addStopSign(sx-11,sz-5.2,-Math.PI/2);addStopSign(sx+11,sz+5.2,Math.PI/2);addStopSign(sx+5.2,sz-11,Math.PI);addStopSign(sx-5.2,sz+11,0)}
+for(let sx=-4000;sx<=4000;sx+=500)for(let sz=-4000;sz<=4000;sz+=500){if(sx%1000===0&&sz%1000===0)continue;addStopSign(sx-11,sz-5.2,-Math.PI/2);addStopSign(sx+11,sz+5.2,Math.PI/2);addStopSign(sx+5.2,sz-11,Math.PI);addStopSign(sx-5.2,sz+11,0)}
 for(const town of TOWNS){
  // Four corner-mounted, correctly facing STOP signs for traffic approaching the town's cross street.
  addStopSign(town.x-11,town.z-5.2,-Math.PI/2);
@@ -422,6 +458,22 @@ for(const town of TOWNS){
  let idx=0;for(const ox of[-108,-54,54,108])for(const oz of[-108,-54,54,108]){addTownBuilding(town,idx++,town.x+ox+(Math.random()-.5)*7,town.z+oz+(Math.random()-.5)*7)}
  addTownSign(town);
 }
+// Connected regional highways with shoulders, medians, dashed lane markings and ramps into the road grid.
+const highwayMat=M(0x20262b,{roughness:.96,metalness:0}),highwayShoulder=M(0x555a5c,{roughness:1,metalness:0}),highwayPaint=M(0xe6e2cf,{roughness:.9,metalness:0});
+for(const z of [-2600,2600]){
+ B(roadGroup,42,.11,9000,0,.06,z,highwayShoulder);B(roadGroup,34,.12,9000,0,.12,z,highwayMat);B(roadGroup,1.1,.22,9000,0,.19,z,roadShoulder);
+ for(const laneZ of [-15,-8,8,15])B(roadGroup,.16,.025,9000,laneZ,.205,z,highwayPaint);
+ for(let x=-4300;x<=4300;x+=42){B(roadGroup,3.5,.026,.18,x,.205,z-4.2,roadWhite);B(roadGroup,3.5,.026,.18,x,.205,z+4.2,roadWhite)}
+ // Broad connectors meet the existing surface-road grid rather than ending abruptly.
+ for(const x of [-2000,-1000,0,1000,2000]){B(roadGroup,24,.08,Math.abs(z)>2000?Math.abs(z)-Math.abs(x)*.08:10,x,.11,Math.sign(z)*((Math.abs(z)+Math.abs(x)*.08)),asphalt)}
+}
+for(const x of [-2600,2600]){B(roadGroup,9000,.11,42, x,.06,0,highwayShoulder);B(roadGroup,9000,.12,34,x,.12,0,highwayMat);B(roadGroup,9000,.12,1.1,x,.19,0,roadShoulder);for(const laneX of [-15,-8,8,15])B(roadGroup,9000,.025,.16,x,.205,laneX,highwayPaint);for(let z=-4300;z<=4300;z+=42){B(roadGroup,.18,.026,3.5,x,.205,z,roadWhite)}}
+// Lakes use layered shoreline banks and reflective water; they sit away from town centers and through-roads.
+function addLake(x,z,rx,rz){const bank=new THREE.Mesh(new THREE.CircleGeometry(1,64),new THREE.MeshStandardMaterial({color:0x7c806c,roughness:.95}));bank.rotation.x=-Math.PI/2;bank.scale.set(rx+12,rz+12,1);bank.position.set(x,.015,z);sc.add(bank);const water=new THREE.Mesh(new THREE.CircleGeometry(1,96),new THREE.MeshPhysicalMaterial({color:0x276b83,roughness:.16,metalness:.22,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.94}));water.rotation.x=-Math.PI/2;water.scale.set(rx,rz,1);water.position.set(x,.045,z);water.receiveShadow=true;sc.add(water);const rim=new THREE.Mesh(new THREE.RingGeometry(.985,1,96),new THREE.MeshStandardMaterial({color:0xb1b29a,roughness:.9,side:THREE.DoubleSide}));rim.rotation.x=-Math.PI/2;rim.scale.set(rx+8,rz+8,1);rim.position.set(x,.035,z);sc.add(rim)}
+addLake(-3275,1275,340,230);addLake(3275,-1275,420,275);addLake(2125,3275,260,180);
+// A larger downtown district with varied glass-and-steel towers, rooftop cores and lit window bands.
+const towerGlass=M(0x537e91,{roughness:.22,metalness:.35}),towerSteel=M(0x4a555d,{roughness:.36,metalness:.72}),towerDark=M(0x273943,{roughness:.32,metalness:.5}),towerWindow=M(0xa6d4e2,{roughness:.18,metalness:.18,emissive:0x263e49,emissiveIntensity:.22});
+for(let i=0;i<24;i++){const cx=1000+(Math.random()-.5)*390,cz=-1100+(Math.random()-.5)*390,w=24+Math.random()*22,d=22+Math.random()*24,h=28+Math.random()*105,g=new THREE.Group(),wall=[towerGlass,towerSteel,towerDark][i%3];B(g,w,h,d,0,h/2,0,wall);B(g,w*.82,.8,d*.82,0,h+.4,0,towerSteel);if(i%3===0)B(g,w*.35,8,d*.35,0,h+4,0,towerDark);for(let yy=5;yy<h-2;yy+=4){B(g,w*.88,.16,.06,0,yy,d/2+.04,towerWindow);B(g,.06,.16,d*.88,w/2+.04,yy,0,towerWindow);B(g,.06,.16,d*.88,-w/2-.04,yy,0,towerWindow)}g.position.set(cx,0,cz);sc.add(g);g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}})}
 // A physical home garage sits just off the Silver Creek town road. The open bay faces east.
 const HOME={x:-445,z:-300,a:0},gasStations=[];
 const garageGroup=new THREE.Group(),garageWall=M(0x777f82,{roughness:.9}),garageTrim=M(0xc8d0d2,{roughness:.75}),garageRoof=M(0x3e4b54,{roughness:.9}),garageFloor=M(0x515656,{roughness:1});
@@ -522,7 +574,7 @@ if(c.frameEnabled!==false&&Array.isArray(c.frameCubes)&&c.frameCubes.length){
  c.frameCubes.forEach((part,index)=>{
    const cube=new THREE.Group(),Lf=cl(Number(part.l)||.45,FRAME_MIN,7),Wf=cl(Number(part.w)||.45,FRAME_MIN,4.5),Hf=cl(Number(part.h)||.45,FRAME_MIN,4.5),chosen=index===selIndex,multiSelected=frameMultiSelection.has(index);
    cube.userData.frameCubeIndex=index;
-   const fm=M(baseColor,{metalness:.28,roughness:.48,emissive:chosen?baseColor:0x000000,emissiveIntensity:chosen?.055:0});
+   const fm=new THREE.MeshPhysicalMaterial({color:baseColor,metalness:graphicsQuality==='fancy'?.82:.62,roughness:graphicsQuality==='fancy'?.27:.42,clearcoat:graphicsQuality==='fancy'?.9:.25,clearcoatRoughness:.2,emissive:chosen?baseColor:0x000000,emissiveIntensity:chosen?.045:0});fm.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nfloat brushed = 0.035 * sin(gl_FragCoord.y * 1.9); roughnessFactor = clamp(roughnessFactor + brushed, 0.12, 0.9);');};fm.customProgramCacheKey=()=> 'ntr-frame-brushed-metal-v2';
    const solid=new THREE.Mesh(makeSolidBlockGeometry(Lf,Hf,Wf,(Number(part.roundness)||0)*100),fm);solid.castShadow=true;solid.receiveShadow=true;solid.userData.frameCubeIndex=index;cube.add(solid);
    // Thin 12-edge outline only on the selected solid block; click/drag selects, Alt-click cycles overlapping blocks.
    const edgeGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(Lf+.018,Hf+.018,Wf+.018));
@@ -544,7 +596,7 @@ if(c.hg){const m=M(0x9fb0ba),y=H+.3;for(let i=0;i<=6;i++)B(bodyGroup,.04,.04,W*1
 const sp=new THREE.Group(),sm=M(0xcfd6db,{metalness:.9});
 for(let i=0;i<c.spk*4;i++){const q=new THREE.Mesh(SG,sm),r=i<4;q.position.set([1,1,-1,-1][i%4]*L*(r?.38:.14),dep?.4:.95,[1,-1,1,-1][i%4]*(W/2-.25));sp.add(q)}
 bodyGroup.add(sp);g.userData.sp=sp;
-const fm=M(parseInt((c.frameColor||'#e0701c').slice(1),16),{metalness:.6}),h=new Set(c.cells);
+const fm=new THREE.MeshPhysicalMaterial({color:parseInt((c.frameColor||'#e0701c').slice(1),16),metalness:graphicsQuality==='fancy'?.82:.62,roughness:graphicsQuality==='fancy'?.27:.42,clearcoat:graphicsQuality==='fancy'?.9:.25,clearcoatRoughness:.2}),h=new Set(c.cells);
 if(!(c.frameSize||0))c.cells.forEach(q=>{const[x,y]=q.split(',').map(Number),wx=(x-CO/2+.5)*CS,wy=(y+.5)*CS;
 for(const s of[-1,1])B(bodyGroup,CS,CS,.1,wx,wy,s*(W/2+.07),fm);
 if(!h.has(x+','+(y+1)))B(bodyGroup,CS,.09,W+.14,wx,wy+CS/2,0,fm);
@@ -568,12 +620,12 @@ function makeCivilian(i){
   const tail=M(0xb71922,{emissive:0x330000});for(const side of[-1,1]){B(g,.06,.16,.12,-v.l/2-.02,.62,side*v.w*.32,tail);B(g,.24,.13,.11,-v.l*.12,1.0,side*(v.w*.52+.1),body)}
   const wheelGeo=new THREE.CylinderGeometry(.28,.28,.2,10);wheelGeo.rotateX(Math.PI/2);
   for(const x of[-v.l*.32,v.l*.32])for(const z of[-v.w*.52,v.w*.52]){const wheel=new THREE.Mesh(wheelGeo,rubber);wheel.position.set(x,.3,z);g.add(wheel)}
-  const axis=Math.random()<.5?'x':'z',roadIndex=Math.floor(Math.random()*9)-4, lane=roadIndex*500+(Math.random()<.5?-2.25:2.25),dir=Math.random()<.5?-1:1,along=-1650+Math.random()*3300;
+  const axis=Math.random()<.5?'x':'z',roadIndex=Math.floor(Math.random()*17)-8, lane=roadIndex*500+(Math.random()<.5?-2.25:2.25),dir=Math.random()<.5?-1:1,along=-3700+Math.random()*7400;
   const x=axis==='x'?along:lane,z=axis==='x'?lane:along,yaw=axis==='x'?(dir>0?0:Math.PI):(dir>0?-Math.PI/2:Math.PI/2);
   g.position.set(x,0,z);g.rotation.y=yaw;sc.add(g);
   traffic.push({g,x,z,startX:x,startZ:z,axis,lane,baseLane:lane,dir,speed:5+Math.random()*7,cruiseSpeed:5+Math.random()*7,yaw,startYaw:yaw,rolled:false,roll:0,vx:0,vz:0,wait:Math.random()*1.5,stoppedAt:null});
 }
-for(let i=0;i<72;i++)makeCivilian(i);
+for(let i=0;i<108;i++)makeCivilian(i);
 function resetTraffic(){for(const v of traffic){v.x=v.startX;v.z=v.startZ;v.rolled=false;v.roll=0;v.vx=v.vz=0;v.stopKey=null;v.stopHold=0;v.lane=v.baseLane;v.passing=false;v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0)}}
 function updateTraffic(dt){
  const now=performance.now()/1000;
@@ -633,7 +685,7 @@ function updateTraffic(dt){
   v.x+=v.axis==='x'?v.dir*v.speed*dt:0;v.z+=v.axis==='z'?v.dir*v.speed*dt:0;
   // Keep civilian vehicles exactly on their assigned asphalt lane; wind only moves them after rollover.
   if(v.axis==='x')v.z=v.lane;else v.x=v.lane;
-  const pos=v.axis==='x'?v.x:v.z;if(pos>2200){if(v.axis==='x')v.x=-2200;else v.z=-2200;v.speed=v.cruiseSpeed}if(pos< -2200){if(v.axis==='x')v.x=2200;else v.z=2200;v.speed=v.cruiseSpeed}
+  const pos=v.axis==='x'?v.x:v.z;if(pos>4000){if(v.axis==='x')v.x=-4000;else v.z=-4000;v.speed=v.cruiseSpeed}if(pos< -4000){if(v.axis==='x')v.x=4000;else v.z=4000;v.speed=v.cruiseSpeed}
   v.g.position.set(v.x,0,v.z);v.g.rotation.set(0,v.startYaw,0);
  }
 }
