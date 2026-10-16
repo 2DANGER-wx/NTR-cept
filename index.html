@@ -1160,4 +1160,5 @@ sky.position.copy(cam.position);{const sx=Math.round(freeCamFocusX),sz=Math.roun
 // Start positioned at the in-town garage, with the editor hidden behind the intro until PLAY is pressed.
 const _rebuild=rebuild;rebuild=function(){_rebuild();if(car){car.position.set(Mi.on&&Mi.car?Mi.car.x:homeCar.x,0,Mi.on&&Mi.car?Mi.car.z:homeCar.z);car.rotation.y=Mi.on&&Mi.car?Mi.car.a:homeCar.a;car.updateMatrixWorld(true);setFrameEditorVisuals(garageOpen&&!Mi.on);if(garageOpen&&!Mi.on&&!freeCamDetached){const p=selectedFrame(cfgOf(S.sel)),f=car.localToWorld(new THREE.Vector3(p.x,p.y,p.z));setFreeCamFocus(f.x,f.y,f.z)}}};
 setGraphicsQuality(graphicsQuality);rebuild();draw();ui();$('#graphicsBtn').hidden=true;$('#uiToggle').hidden=true;$('#pn').hidden=true;$('#hud').hidden=true;$('#freeHud').hidden=true;$('#speedometer').hidden=true;$('#radarWrap').hidden=true;$('#mapToggle').hidden=true;$('#worldMapWrap').hidden=true;$('#garageBtn').hidden=true;$('#alarmToggle').hidden=true;$('#garageDoorLabel').hidden=true;
-</script></body></html>
+</script></body></html
+                 >
